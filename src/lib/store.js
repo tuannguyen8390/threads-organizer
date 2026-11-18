@@ -24,6 +24,7 @@ export function createStore(area) {
   function insert(db, p) {
     if (db.posts[p.id]) return false;
     const full = { folderId: null, tags: [], note: '', media: [], savedAt: Date.now(), ...p };
+    if (!Array.isArray(full.tags)) full.tags = [];
     if (full.folderId && !db.folders[full.folderId]) full.folderId = null;
     db.posts[p.id] = full;
     return true;

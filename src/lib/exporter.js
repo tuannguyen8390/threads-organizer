@@ -1,4 +1,8 @@
-const day = (p) => new Date(p.postedAt ?? p.savedAt).toISOString().slice(0, 10);
+import { normalizePost } from './post.js';
+const day = (p) => {
+  const d = new Date(p.postedAt ?? p.savedAt);
+  return Number.isNaN(d.getTime()) ? 'unknown date' : d.toISOString().slice(0, 10);
+};
 
 export function toMarkdown(posts, folders) {
   const names = new Map(folders.map((f) => [f.id, f.name]));
@@ -39,6 +43,13 @@ export function parseImport(text) {
   let data;
   try { data = JSON.parse(text); } catch { throw bad(); }
   if (!data || !Array.isArray(data.posts)) throw bad();
-  if (!data.posts.every((p) => p && typeof p.id === 'string' && typeof p.url === 'string')) throw bad();
-  return { posts: data.posts, folders: Array.isArray(data.folders) ? data.folders : [] };
+  // A valid top-level shape with some malformed posts keeps the good ones and
+  // drops the rest; only when posts were present and NONE are usable is the
+  // file treated as not an export at all.
+  const posts = data.posts.map(normalizePost).filter(Boolean);
+  if (data.posts.length > 0 && posts.length === 0) throw bad();
+  const folders = (Array.isArray(data.folders) ? data.folders : [])
+    .filter((f) => f && typeof f.id === 'string' && typeof f.name === 'string')
+    .map((f) => ({ id: f.id, name: f.name }));
+  return { posts, folders };
 }

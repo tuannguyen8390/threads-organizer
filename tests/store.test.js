@@ -70,3 +70,11 @@ test('concurrent writes are serialized (no lost updates)', async () => {
   await Promise.all(Array.from({ length: 20 }, (_, i) => s.savePost(post(`P${i}`))));
   assert.equal(Object.keys((await s.getAll()).posts).length, 20);
 });
+
+test('insert tolerates non-array tags', async () => {
+  const { createStore } = await import('../src/lib/store.js');
+  const { memArea } = await import('./helpers.js');
+  const s = createStore(memArea());
+  await s.savePost({ id: 'T', url: 'u', author: 'a', text: '', tags: 'oops' });
+  assert.deepEqual((await s.getAll()).posts.T.tags, []);
+});

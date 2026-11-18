@@ -33,3 +33,21 @@ test('parseImport rejects bad input', () => {
     assert.throws(() => parseImport(bad), /Not a Threads Organizer export/);
   }
 });
+
+test('export survives invalid dates', () => {
+  const md = toMarkdown([post('P9', { savedAt: NaN, postedAt: 'garbage' })], []);
+  assert.match(md, /unknown date/);
+});
+
+test('parseImport drops malformed posts but keeps good ones', () => {
+  const text = JSON.stringify({ posts: [post('P1'), { id: 'Z', url: 'https://example.com/' }, 5], folders: [{ id: 'F', name: 'n' }, { id: 1 }, null] });
+  const out = parseImport(text);
+  assert.deepEqual(out.posts.map((p) => p.id), ['P1']);
+  assert.deepEqual(out.folders, [{ id: 'F', name: 'n' }]);
+  assert.deepEqual(out.posts[0].tags, []);
+});
+
+test('parseImport accepts an empty export and rejects when every post is malformed', () => {
+  assert.deepEqual(parseImport('{"posts":[]}'), { posts: [], folders: [] });
+  assert.throws(() => parseImport('{"posts":[5,{"id":"a"}]}'), /Not a Threads Organizer export/);
+});
