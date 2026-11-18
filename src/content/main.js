@@ -11,9 +11,18 @@ const setLabel = (btn, saved) => {
 };
 
 function decorate(el, savedIds) {
-  if (el.hasAttribute(MARK)) return;
   const post = parsePost(el);
   if (!post) return;
+  // React may re-create or recycle nodes: re-check on every scan.
+  const existing = el.querySelector(':scope > .to-save-btn');
+  if (existing) {
+    if (el.getAttribute(MARK) !== post.id) {
+      el.setAttribute(MARK, post.id);
+      existing.dataset.toBtn = post.id;
+      setLabel(existing, savedIds.has(post.id));
+    }
+    return;
+  }
   el.setAttribute(MARK, post.id);
   if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
 
@@ -21,6 +30,7 @@ function decorate(el, savedIds) {
   btn.type = 'button';
   btn.className = 'to-save-btn';
   btn.dataset.toBtn = post.id;
+  btn.title = 'Click to remove from Threads Organizer';
   setLabel(btn, savedIds.has(post.id));
   btn.addEventListener('click', async (e) => {
     e.preventDefault();
@@ -29,7 +39,10 @@ function decorate(el, savedIds) {
       const fresh = parsePost(el);
       if (!fresh) throw new Error('parse failed');
       const db = await store.getAll();
-      if (db.posts[fresh.id]) {
+      const saved = db.posts[fresh.id];
+      if (saved) {
+        const curated = (saved.note ?? '').trim() || (saved.tags ?? []).length || saved.folderId;
+        if (curated && !confirm('Remove this post and its note/tags/folder?')) return;
         await store.deletePost(fresh.id);
         setLabel(btn, false);
       } else {
@@ -48,6 +61,7 @@ async function scan() {
   const db = await store.getAll();
   const savedIds = new Set(Object.keys(db.posts));
   for (const el of findPostElements(document)) decorate(el, savedIds);
+  mountImportButton(store);
 }
 
 let timer;
@@ -55,11 +69,11 @@ const scheduleScan = () => { clearTimeout(timer); timer = setTimeout(scan, 300);
 new MutationObserver(scheduleScan).observe(document.body, { childList: true, subtree: true });
 scan();
 
-chrome.storage.onChanged.addListener(async () => {
-  const db = await store.getAll();
-  for (const btn of document.querySelectorAll('.to-save-btn')) {
-    setLabel(btn, Boolean(db.posts[btn.dataset.toBtn]));
-  }
+chrome.storage.onChanged.addListener((_changes, areaName) => {
+  if (areaName !== 'local') return;
+  store.getAll().then((db) => {
+    for (const btn of document.querySelectorAll('.to-save-btn')) {
+      setLabel(btn, Boolean(db.posts[btn.dataset.toBtn]));
+    }
+  }).catch(console.error);
 });
-
-mountImportButton(store);

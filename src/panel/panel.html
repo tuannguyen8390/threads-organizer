@@ -20,6 +20,11 @@
     <div id="folders"></div>
     <form id="new-folder"><input id="folder-name" placeholder="New folder"><button>Add</button></form>
     <div id="tags"></div>
+    <div id="filters">
+      <select id="author" aria-label="Author"><option value="">All authors</option></select>
+      <label>From <input id="date-from" type="date"></label>
+      <label>To <input id="date-to" type="date"></label>
+    </div>
   </nav>
   <main id="posts"></main>
   <script type="module" src="panel.js"></script>
