@@ -1,0 +1,12 @@
+.to-save-btn {
+  position: absolute; top: 8px; right: 8px; z-index: 10;
+  padding: 4px 10px; border: 1px solid #888; border-radius: 999px;
+  background: #fff; color: #111; font: 600 12px system-ui, sans-serif; cursor: pointer;
+}
+.to-save-btn.to-saved { background: #111; color: #fff; }
+.to-import-btn {
+  position: fixed; bottom: 20px; right: 20px; z-index: 99999;
+  padding: 10px 16px; border: 0; border-radius: 999px;
+  background: #0a7cff; color: #fff; font: 600 14px system-ui, sans-serif; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
