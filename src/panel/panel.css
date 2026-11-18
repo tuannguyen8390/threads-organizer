@@ -1,0 +1,16 @@
+body { margin: 0; font: 13px system-ui, sans-serif; color: #111; }
+header, nav { padding: 8px; border-bottom: 1px solid #ddd; }
+.row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+button, .btn { font: inherit; padding: 3px 8px; border: 1px solid #bbb; border-radius: 6px; background: #f6f6f6; cursor: pointer; }
+input[type=search], #folder-name { width: 100%; box-sizing: border-box; padding: 5px; }
+#folders, #tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.chip { padding: 2px 8px; border-radius: 999px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
+.chip.active { background: #111; color: #fff; }
+#new-folder { display: flex; gap: 4px; }
+#status { min-height: 1.2em; color: #555; margin-top: 4px; }
+.card { padding: 10px 8px; border-bottom: 1px solid #eee; }
+.card .meta { color: #666; margin-bottom: 4px; }
+.card .text { white-space: pre-wrap; margin: 4px 0; max-height: 9em; overflow: auto; }
+.card input, .card textarea, .card select { width: 100%; box-sizing: border-box; margin-top: 4px; font: inherit; }
+.card .actions { display: flex; gap: 6px; margin-top: 6px; }
+.empty { padding: 20px; color: #777; text-align: center; }
