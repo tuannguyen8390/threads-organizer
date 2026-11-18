@@ -42,3 +42,16 @@ export function parsePost(el) {
   if (t) post.postedAt = t;
   return post;
 }
+
+const BTN = '[role="button"], button';
+
+// The post's "…" (More) menu button, or null. Used to position our button below it.
+export function findMenuAnchor(el) {
+  const label = el.querySelector('[aria-label="More"]');
+  if (label) return label.closest(BTN) || label;
+  for (const svg of el.querySelectorAll('svg[aria-label]')) {
+    if (/^more$/i.test(svg.getAttribute('aria-label').trim())) return svg.closest(BTN) || svg;
+  }
+  const btn = [...el.querySelectorAll(BTN)].find((b) => /^more$/i.test((b.getAttribute('aria-label') ?? '').trim()));
+  return btn ?? null;
+}

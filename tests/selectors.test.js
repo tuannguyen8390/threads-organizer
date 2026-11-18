@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
-import { findPostElements, parsePost } from '../src/content/selectors.js';
+import { findPostElements, parsePost, findMenuAnchor } from '../src/content/selectors.js';
 
 const load = () => new JSDOM(readFileSync(new URL('./fixtures/post.html', import.meta.url), 'utf8')).window.document;
 
@@ -25,4 +25,14 @@ test('parsePost extracts id, author, url, text, media, time', () => {
 
 test('parsePost returns null without a permalink', () => {
   assert.equal(parsePost(load().getElementById('not-a-post')), null);
+});
+
+test('findMenuAnchor returns the More button inside a post', () => {
+  const doc = new JSDOM(`<div id="post"><div role="button" id="menu"><svg aria-label="More"></svg></div>
+    <div role="button" id="other"><svg aria-label="Like"></svg></div></div>`).window.document;
+  assert.equal(findMenuAnchor(doc.getElementById('post')).id, 'menu');
+});
+
+test('findMenuAnchor returns null when there is no More button', () => {
+  assert.equal(findMenuAnchor(load().getElementById('p1')), null);
 });
