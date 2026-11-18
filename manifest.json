@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Threads Organizer",
+  "version": "0.1.0",
+  "description": "Save, organize and share your Threads posts. Everything stays on your device.",
+  "permissions": ["storage", "sidePanel", "unlimitedStorage"],
+  "host_permissions": ["https://*.threads.com/*", "https://*.threads.net/*"],
+  "background": { "service_worker": "src/background.js", "type": "module" },
+  "side_panel": { "default_path": "src/panel/panel.html" },
+  "action": { "default_title": "Open Threads Organizer" },
+  "content_scripts": [{
+    "matches": ["https://*.threads.com/*", "https://*.threads.net/*"],
+    "js": ["src/content/loader.js"],
+    "css": ["src/content/content.css"],
+    "run_at": "document_idle"
+  }],
+  "web_accessible_resources": [{
+    "resources": ["src/content/*.js", "src/lib/*.js"],
+    "matches": ["https://*.threads.com/*", "https://*.threads.net/*"]
+  }]
+}
