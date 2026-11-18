@@ -1,0 +1,19 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag must match manifest version
+        run: test "v$(jq -r .version manifest.json)" = "${GITHUB_REF_NAME}"
+      - name: Build zip
+        run: zip -r "threads-organizer-${GITHUB_REF_NAME}.zip" manifest.json src LICENSE README.md
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: threads-organizer-*.zip
+          generate_release_notes: true
