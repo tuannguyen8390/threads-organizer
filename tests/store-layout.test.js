@@ -25,7 +25,7 @@ test('writes only touch the changed keys', async () => {
   area.set = (o) => { sets.push(Object.keys(o)); return origSet(o); };
   await s.updatePost('P1', { note: 'n' });
   await s.updateCounts('P2', { likes: 1, replies: 1, reposts: 1 });
-  assert.deepEqual(sets, [['tops:post:P1'], ['tops:post:P2']]);
+  assert.deepEqual(sets, [['tops:post:P1'], ['tops:counts:P2']]);
 });
 
 test('deletePost removes only its key', async () => {
@@ -160,7 +160,7 @@ test('migration: legacy posts and folders move to per-key storage on getAll', as
   assert.ok(Number.isFinite(db.posts.L2.savedAt));
   assert.equal(db.folders.LF.name, 'Legacy folder');
   assert.equal(LEGACY in area.dump(), false);
-  assert.deepEqual(Object.keys(area.dump()).sort(), ['tops:folder:LF', 'tops:post:L1', 'tops:post:L2']);
+  assert.deepEqual(Object.keys(area.dump()).sort(), ['tops:folder:LF', 'tops:legacy-backup', 'tops:post:L1', 'tops:post:L2']);
 });
 
 test('migration runs on the first mutation too, before the mutation applies', async () => {
@@ -235,4 +235,132 @@ test('migration keeps __proto__ ids as plain data and drops malformed entries', 
   assert.equal(db.posts.G.folderId, null);
   assert.equal(db.folders.__proto__.name, 'pf');
   assert.equal(({}).name, undefined);
+});
+
+// ---- counts under their own key ----
+const C1 = { likes: 3, replies: 1, reposts: 2 };
+const C2 = { likes: 9, replies: 4, reposts: 5 };
+
+test('counts race: a note/tags edit and a counts update never undo each other', async () => {
+  for (const countsFirst of [false, true]) {
+    const area = memArea();
+    const a = createStore(area);
+    const b = createStore(area);
+    await a.savePost(post('P1', { counts: C1 }));
+    const edit = a.updatePost('P1', { note: 'mine', tags: ['t'] });
+    let upd;
+    if (countsFirst) { upd = b.updateCounts('P1', C2); await edit; } else { await new Promise((r) => setImmediate(r)); upd = b.updateCounts('P1', C2); await edit; }
+    await upd;
+    const p = (await a.getAll()).posts.P1;
+    assert.deepEqual([p.note, p.tags, p.counts], ['mine', ['t'], C2]);
+    assert.deepEqual(area.dump()['tops:counts:P1'], C2);
+    assert.equal('counts' in area.dump()['tops:post:P1'], false);
+  }
+});
+
+test('savePost with counts writes both keys; the post key has no counts', async () => {
+  const area = memArea();
+  const s = createStore(area);
+  await s.savePost(post('P1', { counts: C1 }));
+  assert.deepEqual(area.dump()['tops:counts:P1'], C1);
+  assert.equal('counts' in area.dump()['tops:post:P1'], false);
+  assert.deepEqual((await s.getAll()).posts.P1.counts, C1);
+  await s.savePosts([post('P2', { counts: C2 })]);
+  assert.deepEqual(area.dump()['tops:counts:P2'], C2);
+  await s.merge({ posts: [post('P3', { counts: C1 })] });
+  assert.deepEqual(area.dump()['tops:counts:P3'], C1);
+});
+
+test('deletePost removes both keys; orphan counts are ignored', async () => {
+  const area = memArea();
+  const s = createStore(area);
+  await s.savePost(post('P1', { counts: C1 }));
+  await s.deletePost('P1');
+  assert.deepEqual(Object.keys(area.dump()), []);
+  await area.set({ 'tops:counts:GHOST': C1 });
+  assert.deepEqual(Object.keys((await s.getAll()).posts), []);
+  assert.equal(await s.updateCounts('GHOST', C2), null);
+  assert.deepEqual(area.dump()['tops:counts:GHOST'], C1);
+});
+
+test('old-format post with embedded counts is read, kept and migrated on write', async () => {
+  const area = memArea();
+  const s = createStore(area);
+  await area.set({ 'tops:post:P1': { ...post('P1'), folderId: null, tags: [], note: '', counts: C1 } });
+  assert.deepEqual((await s.getAll()).posts.P1.counts, C1);
+  await s.updatePost('P1', { note: 'n' });
+  assert.deepEqual(area.dump()['tops:counts:P1'], C1);
+  assert.equal('counts' in area.dump()['tops:post:P1'], false);
+  assert.deepEqual((await s.getAll()).posts.P1.counts, C1);
+  // counts key wins over a stale embedded value, and updateCounts never touches the post key
+  await area.set({ 'tops:post:P2': { ...post('P2'), counts: C1 } });
+  await s.updateCounts('P2', C2);
+  assert.deepEqual((await s.getAll()).posts.P2.counts, C2);
+  await s.updatePost('P2', { note: 'x' });
+  assert.deepEqual((await s.getAll()).posts.P2.counts, C2);
+});
+
+test('updateCounts rejects invalid counts and writes no counts key', async () => {
+  const area = memArea();
+  const s = createStore(area);
+  await s.savePost(post('P1'));
+  for (const bad of [null, { likes: -1, replies: 0, reposts: 0 }, { likes: NaN, replies: 0, reposts: 0 }, { likes: 1 }]) {
+    assert.equal(await s.updateCounts('P1', bad), null);
+  }
+  assert.equal('tops:counts:P1' in area.dump(), false);
+});
+
+test('migration routes legacy counts to counts keys', async () => {
+  const area = memArea();
+  const lg = legacyDb();
+  lg.posts.L1.counts = C1;
+  await area.set({ [LEGACY]: lg });
+  const db = await createStore(area).getAll();
+  assert.deepEqual(db.posts.L1.counts, C1);
+  assert.deepEqual(area.dump()['tops:counts:L1'], C1);
+  assert.equal('counts' in area.dump()['tops:post:L1'], false);
+});
+
+test('isStoreChange reacts to counts keys', () => {
+  assert.equal(isStoreChange({ 'tops:counts:P1': {} }, 'local'), true);
+  assert.equal(isStoreChange({ 'tops:legacy-backup': {} }, 'local'), false);
+});
+
+// ---- legacy backup ----
+test('migration keeps a raw backup, written in the same batch before the legacy key is removed', async () => {
+  const area = memArea();
+  const lg = legacyDb();
+  await area.set({ [LEGACY]: lg });
+  const calls = [];
+  const spy = { get: (k) => area.get(k), set: (o) => (calls.push(['set', Object.keys(o)]), area.set(o)), remove: (k) => (calls.push(['remove', k]), area.remove(k)) };
+  const db = await createStore(spy).getAll();
+  assert.deepEqual(area.dump()['tops:legacy-backup'], lg);
+  assert.equal(calls[0][0], 'set');
+  assert.ok(calls[0][1].includes('tops:legacy-backup') && calls[0][1].includes('tops:post:L1'));
+  assert.deepEqual(calls[1], ['remove', LEGACY]);
+  assert.deepEqual(Object.keys(db.posts).sort(), ['L1', 'L2']);
+  assert.deepEqual(Object.keys(db.folders), ['LF']);
+});
+
+test('a second migration run never overwrites the first backup', async () => {
+  const area = memArea();
+  const lg = legacyDb();
+  await area.set({ [LEGACY]: lg });
+  const s = createStore(area);
+  await s.getAll();
+  await area.set({ [LEGACY]: { posts: {}, folders: {} } });
+  await s.getAll();
+  assert.deepEqual(area.dump()['tops:legacy-backup'], lg);
+  assert.equal(LEGACY in area.dump(), false);
+});
+
+test('malformed legacy payloads are backed up raw', async () => {
+  for (const raw of ['garbage', [1, 2], null, { posts: [] }]) {
+    const area = memArea();
+    await area.set({ [LEGACY]: raw });
+    const db = await createStore(area).getAll();
+    assert.deepEqual(Object.keys(db.posts), []);
+    assert.deepEqual(area.dump()['tops:legacy-backup'], raw);
+    assert.equal(LEGACY in area.dump(), false);
+  }
 });
