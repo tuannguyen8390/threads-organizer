@@ -35,7 +35,7 @@ test('deletePost removes the post', async () => {
   const s = createStore(memArea());
   await s.savePost(post('P1'));
   await s.deletePost('P1');
-  assert.deepEqual((await s.getAll()).posts, {});
+  assert.deepEqual(Object.keys((await s.getAll()).posts), []);
 });
 
 test('deleteFolder unfiles its posts', async () => {
@@ -47,7 +47,7 @@ test('deleteFolder unfiles its posts', async () => {
   await s.deleteFolder(f.id);
   const db = await s.getAll();
   assert.equal(db.posts.P1.folderId, null);
-  assert.deepEqual(db.folders, {});
+  assert.deepEqual(Object.keys(db.folders), []);
 });
 
 test('merge adds missing items, keeps existing, drops dangling folder ids', async () => {

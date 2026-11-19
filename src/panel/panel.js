@@ -1,4 +1,4 @@
-import { createStore } from '../lib/store.js';
+import { createStore, isStoreChange } from '../lib/store.js';
 import { filterPosts, allTags } from '../lib/search.js';
 import { formatCount } from '../lib/format.js';
 import { toMarkdown, toJSON, parseImport } from '../lib/exporter.js';
@@ -21,6 +21,8 @@ const visible = () => filterPosts(Object.values(state.db.posts), {
 });
 const folderList = () => Object.values(state.db.folders);
 const say = (msg) => { $('status').textContent = msg; };
+// Surface a failed storage write instead of letting the user believe it was saved.
+const saving = (promise) => promise.catch((err) => { console.error(err); say("Couldn't save that change. Try again."); });
 
 function chip(label, active, onclick) {
   return el('button', { className: `chip${active ? ' active' : ''}`, textContent: label, onclick });
@@ -49,7 +51,7 @@ function renderFolders() {
       if (state.folderId === f.id) {
         c.append(el('span', {
           textContent: ' ×', title: 'Delete folder (posts move back to To sort)',
-          onclick: async (e) => { e.stopPropagation(); state.folderId = undefined; await store.deleteFolder(f.id); },
+          onclick: (e) => { e.stopPropagation(); state.folderId = undefined; saving(store.deleteFolder(f.id)); },
         }));
       }
       return c;
@@ -134,9 +136,9 @@ function makeCard(id) {
     tags: el('input', { placeholder: 'tags, comma separated' }),
     note: el('textarea', { placeholder: 'Why does this matter?', rows: 2 }),
   };
-  refs.folder.onchange = () => store.updatePost(id, { folderId: refs.folder.value || null });
-  refs.tags.onchange = () => store.updatePost(id, { tags: parseTags(refs.tags.value) });
-  refs.note.onchange = () => store.updatePost(id, { note: refs.note.value });
+  refs.folder.onchange = () => saving(store.updatePost(id, { folderId: refs.folder.value || null }));
+  refs.tags.onchange = () => saving(store.updatePost(id, { tags: parseTags(refs.tags.value) }));
+  refs.note.onchange = () => saving(store.updatePost(id, { note: refs.note.value }));
 
   const copy = (label, pick) => el('button', {
     textContent: label,
@@ -153,7 +155,7 @@ function makeCard(id) {
       el('button', { textContent: 'Open', onclick: () => { const p = current(id); if (p) chrome.tabs.create({ url: p.url }); } }),
       copy('Copy link', (p) => p.url),
       copy('Copy text', (p) => p.text),
-      el('button', { textContent: 'Remove', onclick: () => store.deletePost(id) })));
+      el('button', { textContent: 'Remove', onclick: () => saving(store.deletePost(id)) })));
   return { node, refs, folderKey: null };
 }
 
@@ -215,7 +217,17 @@ function render() {
   renderFolders(); renderTags(); renderAuthors(); renderPosts();
 }
 
-async function load() { state.db = await store.getAll(); render(); }
+let loadSeq = 0;
+async function load() {
+  const seq = ++loadSeq;
+  try {
+    const db = await store.getAll();
+    if (seq === loadSeq) { state.db = db; render(); } // ignore a slower, older read
+  } catch (err) {
+    console.error(err);
+    say("Couldn't read saved posts.");
+  }
+}
 
 function download(name, text, type) {
   const a = el('a', { href: URL.createObjectURL(new Blob([text], { type })), download: name });
@@ -235,10 +247,15 @@ $('new-folder').onsubmit = async (e) => {
   e.preventDefault();
   const name = $('folder-name').value.trim();
   if (!name) return;
-  const f = await store.addFolder(name);
-  $('folder-name').value = '';
-  state.folderId = f.id;
-  render();
+  try {
+    const f = await store.addFolder(name);
+    $('folder-name').value = '';
+    state.folderId = f.id;
+    await load();
+  } catch (err) {
+    console.error(err);
+    say("Couldn't create that folder.");
+  }
 };
 $('export-md').onclick = () => download('threads-export.md', toMarkdown(visible(), folderList()), 'text/markdown');
 $('export-json').onclick = () => download('threads-export.json', toJSON(visible(), folderList()), 'application/json');
@@ -254,5 +271,5 @@ $('import-json').onchange = async (e) => {
   e.target.value = '';
 };
 
-chrome.storage.onChanged.addListener(load);
+chrome.storage.onChanged.addListener((changes, areaName) => { if (isStoreChange(changes, areaName)) load(); });
 load();
