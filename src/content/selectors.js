@@ -14,13 +14,53 @@ function containerFor(anchor) {
   return anchor.parentElement;
 }
 
-export function findPostElements(root) {
-  const seen = new Set();
-  for (const a of root.querySelectorAll('a[href*="/post/"]')) {
-    if (!parsePermalink(a.getAttribute('href'))) continue;
-    seen.add(containerFor(a));
+const area = (r) => Math.max(0, r.width) * Math.max(0, r.height);
+
+// Same post/row when one candidate contains the other, or their rects overlap by > 50% of the smaller.
+function sameRow(a, b) {
+  if (a.contains(b) || b.contains(a)) return true;
+  const ra = a.getBoundingClientRect();
+  const rb = b.getBoundingClientRect();
+  const small = Math.min(area(ra), area(rb));
+  if (!small) return false;
+  const w = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
+  const h = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
+  return w > 0 && h > 0 && (w * h) / small > 0.5;
+}
+
+// Of candidate hosts for the same post id, keep one per cluster of nested/overlapping ones:
+// prefer one holding a menu anchor, then the outermost, then the first in document order.
+// Disjoint candidates are separate posts and all stay. Result is in document order.
+export function chooseHost(candidates) {
+  const list = [...new Set(candidates)];
+  const groups = [];
+  for (const c of list) {
+    const hit = groups.filter((g) => g.some((o) => sameRow(o, c)));
+    const merged = [c, ...hit.flat()];
+    for (const g of hit) groups.splice(groups.indexOf(g), 1);
+    groups.push(merged);
   }
-  return [...seen];
+  const docOrder = (x, y) => (x === y ? 0 : x.compareDocumentPosition(y) & 4 ? -1 : 1);
+  const kept = groups.map((g) => {
+    const sorted = [...g].sort(docOrder);
+    const withMenu = sorted.filter((c) => findMenuAnchorInfo(c).anchor);
+    const pool = withMenu.length ? withMenu : sorted;
+    return pool.find((c) => pool.every((o) => o === c || c.contains(o))) ?? pool.find((c) => !pool.some((o) => o !== c && o.contains(c))) ?? pool[0];
+  });
+  return kept.sort(docOrder);
+}
+
+export function findPostElements(root) {
+  const byId = new Map();
+  for (const a of root.querySelectorAll('a[href*="/post/"]')) {
+    const link = parsePermalink(a.getAttribute('href'));
+    if (!link) continue;
+    if (!byId.has(link.id)) byId.set(link.id, new Set());
+    byId.get(link.id).add(containerFor(a));
+  }
+  const out = [];
+  for (const set of byId.values()) out.push(...chooseHost([...set]));
+  return out.sort((x, y) => (x === y ? 0 : x.compareDocumentPosition(y) & 4 ? -1 : 1));
 }
 
 export function parsePost(el) {

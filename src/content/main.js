@@ -73,6 +73,12 @@ function placeButton(btn, el) {
   if (btn.style.right !== right) btn.style.right = right;
 }
 
+// True when another element related by containment already carries our button.
+const relatedHasButton = (el) => [...document.querySelectorAll('.to-save-btn')].some((b) => {
+  const host = b.parentElement;
+  return host !== el && (host.contains(el) || el.contains(host));
+});
+
 function decorate(el, savedIds) {
   const post = parsePost(el);
   if (!post) return;
@@ -87,6 +93,7 @@ function decorate(el, savedIds) {
     placeButton(existing, el);
     return;
   }
+  if (relatedHasButton(el)) return;
   el.setAttribute(MARK, post.id);
   if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
 
@@ -125,7 +132,15 @@ function decorate(el, savedIds) {
 async function scan() {
   const db = await store.getAll();
   const savedIds = new Set(Object.keys(db.posts));
-  for (const el of findPostElements(document)) decorate(el, savedIds);
+  const hosts = findPostElements(document);
+  // Drop stray buttons left on elements that are no longer post hosts (e.g. duplicates from before a rescan).
+  for (const b of document.querySelectorAll('.to-save-btn')) {
+    if (!hosts.includes(b.parentElement)) {
+      b.parentElement?.removeAttribute(MARK);
+      b.remove();
+    }
+  }
+  for (const el of hosts) decorate(el, savedIds);
   mountImportButton(store);
 }
 

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
-import { findPostElements, parsePost, findMenuAnchor, findMenuAnchorInfo, findRowNeighbors } from '../src/content/selectors.js';
+import { findPostElements, parsePost, findMenuAnchor, findMenuAnchorInfo, findRowNeighbors, chooseHost } from '../src/content/selectors.js';
 
 const load = () => new JSDOM(readFileSync(new URL('./fixtures/post.html', import.meta.url), 'utf8')).window.document;
 
@@ -150,4 +150,53 @@ test('parsePost includes counts when an action row exists', () => {
   const p = parsePost(doc.getElementById('post'));
   assert.deepEqual(p.counts, { likes: 219, replies: 2, reposts: 1 });
   assert.equal('counts' in parsePost(findPostElements(load())[0]), false);
+});
+
+// --- Activity (notifications) rows: several permalinks to the same post per row ---
+const dots = '<svg><circle r="1"/><circle r="1"/><circle r="1"/></svg>';
+const notifRow = (rid, pid) => `<div id="${rid}">
+  <div id="${rid}-av"><a href="/@bob/post/${pid}"><img alt="profile picture" src="https://x/a.jpg"></a></div>
+  <div id="${rid}-tx"><a href="/@bob/post/${pid}">replied to you</a><time datetime="2026-11-01T10:00:00.000Z"></time></div>
+  <div id="${rid}-th"><a href="/@bob/post/${pid}"><img src="https://x/t.jpg"></a></div>
+  <div role="button" id="${rid}-menu">${dots}</div>
+</div>`;
+
+test('findPostElements: a notification row with 3 same-post links yields one element, the one with the menu', () => {
+  const doc = mk(`<div>${notifRow('r1', 'C111')}</div>`);
+  const els = findPostElements(doc);
+  assert.equal(els.length, 1);
+  assert.equal(els[0].id, 'r1');
+  assert.ok(findMenuAnchorInfo(els[0]).anchor);
+});
+
+test('findPostElements: different notification rows stay separate', () => {
+  const doc = mk(`<div>${notifRow('r1', 'C111')}${notifRow('r2', 'C222')}</div>`);
+  assert.deepEqual(findPostElements(doc).map((e) => e.id), ['r1', 'r2']);
+});
+
+test('findPostElements: disjoint blocks with the same post id both stay', () => {
+  const doc = mk(`<div><div id="b1"><a href="/@a/post/C9">x</a><time></time></div>
+    <div id="b2"><a href="/@a/post/C9">x</a><time></time></div></div>`);
+  rect(doc.getElementById('b1'), 0, 0, 600, 100);
+  rect(doc.getElementById('b2'), 0, 200, 600, 100);
+  assert.deepEqual(findPostElements(doc).map((e) => e.id), ['b1', 'b2']);
+});
+
+test('findPostElements: overlapping same-id siblings collapse to the one with the menu anchor', () => {
+  const doc = mk(`<div><div id="s1"><a href="/@a/post/C9">x</a><time></time></div>
+    <div id="s2"><a href="/@a/post/C9">x</a><time></time><div role="button">${dots}</div></div></div>`);
+  rect(doc.getElementById('s1'), 0, 0, 600, 100);
+  rect(doc.getElementById('s2'), 0, 10, 600, 100);
+  assert.deepEqual(findPostElements(doc).map((e) => e.id), ['s2']);
+});
+
+test('chooseHost: nested pair prefers menu anchor, then outermost, then first', () => {
+  const doc = mk(`<div id="o"><div id="i"><div role="button">${dots}</div></div></div>`);
+  const o = doc.getElementById('o');
+  const i = doc.getElementById('i');
+  assert.deepEqual(chooseHost([o, i]), [i]);
+  const doc2 = mk('<div id="o"><div id="i"></div></div><div id="z"></div>');
+  const [o2, i2, z] = ['o', 'i', 'z'].map((id) => doc2.getElementById(id));
+  assert.deepEqual(chooseHost([i2, o2]), [o2]);
+  assert.deepEqual(chooseHost([z, o2, i2]), [o2, z].sort((a, b) => (a.compareDocumentPosition(b) & 4 ? -1 : 1)));
 });
