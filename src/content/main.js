@@ -1,6 +1,5 @@
 import { createStore } from '../lib/store.js';
 import { findPostElements, parsePost, findMenuAnchorInfo, findRowNeighbors } from './selectors.js';
-import { mountImportButton } from './import-ui.js';
 
 const store = createStore(chrome.storage.local);
 const MARK = 'data-to-id';
@@ -156,7 +155,6 @@ async function scan() {
   for (const el of hosts) decorate(el, db, updates);
   // At most one write per changed post; the onChanged listener only relabels, so this cannot loop.
   for (const [id, counts] of updates) await store.updateCounts(id, counts).catch(console.error);
-  mountImportButton(store);
 }
 
 let timer;

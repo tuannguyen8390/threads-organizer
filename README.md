@@ -13,8 +13,7 @@ Save, organize and share your Threads posts. Everything stays on your device.
 
 ## Use
 
-- Click **Save** on any post on threads.com.
-- To import everything you've already saved: click **Import saved…** in the panel, then **Import all saved posts** on the page that opens.
+- Click the stack icon on any post. Open the panel to sort it into a folder, tag it and add a note.
 - Organize with folders, tags and notes. Search across everything. Copy link/text, or export a view as Markdown or JSON. JSON import moves data between machines.
 
 ## Privacy

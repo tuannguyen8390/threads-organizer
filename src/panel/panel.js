@@ -237,7 +237,6 @@ $('new-folder').onsubmit = async (e) => {
   state.folderId = f.id;
   render();
 };
-$('open-saved').onclick = () => chrome.tabs.create({ url: 'https://www.threads.com/saved' });
 $('export-md').onclick = () => download('threads-export.md', toMarkdown(visible(), folderList()), 'text/markdown');
 $('export-json').onclick = () => download('threads-export.json', toJSON(visible(), folderList()), 'application/json');
 $('import-json').onchange = async (e) => {
