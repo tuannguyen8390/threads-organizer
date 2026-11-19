@@ -229,3 +229,28 @@ test('parseCounts: no icons gives null', () => {
   const doc = mk(postHtml('<div><span>12</span><span>3</span></div>'));
   assert.equal(parseCounts(doc.getElementById('post')), null);
 });
+
+const parseHtml = (inner) => {
+  const doc = new JSDOM(`<div data-pressable-container="true" id="x"><a href="/@z/post/Cz1"><time datetime="2026-01-01T00:00:00Z">10h</time></a>${inner}</div>`).window.document;
+  return parsePost(doc.getElementById('x'));
+};
+
+test('parsePost keeps the relative time and Translate label out of text', () => {
+  const p = parseHtml('<span dir="auto">10h</span><span dir="auto">hello world</span><span dir="auto">Translate</span><span dir="auto">Xem bản dịch</span>');
+  assert.equal(p.text, 'hello world');
+});
+
+test('parsePost drops spans carrying a translate aria-label', () => {
+  const p = parseHtml('<span dir="auto">real</span><div aria-label="See translation"><span dir="auto">anything</span></div>');
+  assert.equal(p.text, 'real');
+});
+
+test('parsePost keeps a sentence that contains the word translate', () => {
+  const p = parseHtml('<span dir="auto">How do I translate this word?</span>');
+  assert.equal(p.text, 'How do I translate this word?');
+});
+
+test('parsePost drops pagination markers like 1/2 but keeps other fractions in prose', () => {
+  const p = parseHtml('<span dir="auto">part one</span><span dir="auto">1/2</span><span dir="auto">mix 1/2 cup</span>');
+  assert.equal(p.text, 'part one\nmix 1/2 cup');
+});

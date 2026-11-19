@@ -63,13 +63,26 @@ export function findPostElements(root) {
   return out.sort((x, y) => (x === y ? 0 : x.compareDocumentPosition(y) & 4 ? -1 : 1));
 }
 
+// UI-control labels Threads renders inside post text ("Translate" in common languages).
+const TRANSLATE_LABEL = /^(?:translate|see translation|dịch|xem bản dịch|traducir|traduire|übersetzen|tradurre|traduzir|翻訳|번역|翻译|перевести)$/i;
+const PAGE_MARKER = /^\d+\/\d+$/;
+
+function isChrome(s, timeEl) {
+  const t = s.textContent.trim();
+  if (timeEl && (timeEl.contains(s) || t === timeEl.textContent.trim())) return true;
+  if (TRANSLATE_LABEL.test(t) || PAGE_MARKER.test(t)) return true;
+  const label = s.closest('[aria-label]')?.getAttribute('aria-label')?.trim();
+  return !!label && TRANSLATE_LABEL.test(label);
+}
+
 export function parsePost(el) {
   const link = permalinkAnchor(el);
   if (!link) return null;
   const { id, author, url } = parsePermalink(link.getAttribute('href'));
 
+  const timeEl = el.querySelector('time');
   const spans = [...el.querySelectorAll('span[dir="auto"]')]
-    .filter((s) => !s.closest('a') && !s.closest('[role="button"]') && s.textContent.trim());
+    .filter((s) => !s.closest('a, button, [role="button"]') && s.textContent.trim() && !isChrome(s, timeEl));
   const top = spans.filter((s) => !spans.some((o) => o !== s && o.contains(s)));
   const text = top.map((s) => s.textContent.trim()).join('\n');
 
