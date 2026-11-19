@@ -13,11 +13,6 @@
       <span class="brand-credit">| by Dr. Kangabu</span>
     </div>
     <input id="search" type="search" placeholder="Search posts, authors, notes, tags">
-    <div class="row">
-      <button id="export-md">Export MD</button>
-      <button id="export-json">Export JSON</button>
-      <label class="btn">Import JSON<input id="import-json" type="file" accept="application/json" hidden></label>
-    </div>
     <div id="status" role="status"></div>
   </header>
   <nav>
@@ -31,6 +26,12 @@
     </div>
   </nav>
   <main id="posts"></main>
+  <footer>
+    <span class="footer-label">Share or back up</span>
+    <button id="export-md" title="Download the posts in the current view as Markdown">Export MD</button>
+    <button id="export-json" title="Download the posts in the current view as JSON">Export JSON</button>
+    <label class="btn" title="Restore posts from a JSON file you exported">Import JSON<input id="import-json" type="file" accept="application/json" hidden></label>
+  </footer>
   <script type="module" src="panel.js"></script>
 </body>
 </html>
