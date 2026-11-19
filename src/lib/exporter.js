@@ -8,7 +8,7 @@ export function toMarkdown(posts, folders) {
   const names = new Map(folders.map((f) => [f.id, f.name]));
   const groups = new Map();
   for (const p of posts) {
-    const name = names.get(p.folderId) ?? 'Unfiled';
+    const name = names.get(p.folderId) ?? 'To sort';
     if (!groups.has(name)) groups.set(name, []);
     groups.get(name).push(p);
   }

@@ -13,7 +13,7 @@ const posts = [
 test('markdown groups by folder and includes link, tags, note, quoted text', () => {
   const md = toMarkdown(posts, folders);
   assert.match(md, /## Ideas/);
-  assert.match(md, /## Unfiled/);
+  assert.match(md, /## To sort/);
   assert.match(md, /@alice/);
   assert.match(md, /2026-11-01/);
   assert.match(md, /https:\/\/www\.threads\.com\/@a\/post\/P1/);

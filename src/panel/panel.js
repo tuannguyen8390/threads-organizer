@@ -39,12 +39,12 @@ function renderFolders() {
   setChips($('folders'), key, () => [
     chip('All', state.folderId === undefined && state.tag === undefined,
       () => { state.folderId = undefined; state.tag = undefined; render(); }),
-    chip('Unfiled', state.folderId === null, () => { state.folderId = null; render(); }),
+    chip('To sort', state.folderId === null, () => { state.folderId = null; render(); }),
     ...fs.map((f) => {
       const c = chip(f.name, state.folderId === f.id, () => { state.folderId = f.id; render(); });
       if (state.folderId === f.id) {
         c.append(el('span', {
-          textContent: ' ×', title: 'Delete folder (posts become unfiled)',
+          textContent: ' ×', title: 'Delete folder (posts move back to To sort)',
           onclick: async (e) => { e.stopPropagation(); state.folderId = undefined; await store.deleteFolder(f.id); },
         }));
       }
@@ -126,7 +126,7 @@ function updateCard(c, p) {
   const folderKey = JSON.stringify(fs.map((f) => [f.id, f.name]));
   if (c.folderKey !== folderKey && document.activeElement !== refs.folder) {
     c.folderKey = folderKey;
-    refs.folder.replaceChildren(el('option', { value: '', textContent: 'Unfiled' }),
+    refs.folder.replaceChildren(el('option', { value: '', textContent: 'To sort' }),
       ...fs.map((f) => el('option', { value: f.id, textContent: f.name })));
     refs.folder.value = '';
   }
