@@ -1,4 +1,5 @@
 import { parsePermalink } from '../lib/post.js';
+import { parseCount } from '../lib/format.js';
 
 const permalinkAnchor = (root) =>
   [...root.querySelectorAll('a[href*="/post/"]')].find((a) => parsePermalink(a.getAttribute('href')));
@@ -40,7 +41,50 @@ export function parsePost(el) {
   const post = { id, url, author, text, media };
   const t = el.querySelector('time')?.getAttribute('datetime');
   if (t) post.postedAt = t;
+  const counts = parseCounts(el);
+  if (counts) post.counts = counts;
   return post;
+}
+
+const ACTION_BTN = 'button, [role="button"]';
+const ACTION_DEPTH = 3;
+
+const countText = (btn) => {
+  const clone = btn.cloneNode(true);
+  for (const s of clone.querySelectorAll('svg')) s.remove();
+  return clone.textContent;
+};
+
+// The post's action row (like, reply, repost, share, ...) found by structure, not by labels:
+// the smallest ancestor (up to ACTION_DEPTH levels up) holding >= 3 icon buttons. When a post
+// has several such rows, the lowest wins (layout if available, else the last in DOM order).
+function findActionRow(el) {
+  const btns = [...el.querySelectorAll(ACTION_BTN)].filter((b) =>
+    b.querySelector('svg') && !b.closest('.to-save-btn') && !b.parentElement?.closest(ACTION_BTN));
+  const rows = new Map();
+  for (const b of btns) {
+    let n = b.parentElement;
+    for (let i = 0; n && i < ACTION_DEPTH && n !== el; i++, n = n.parentElement) {
+      const inside = btns.filter((o) => n.contains(o));
+      if (inside.length >= 3) { rows.set(n, inside); break; }
+    }
+  }
+  const all = [...rows.values()];
+  if (!all.length) return null;
+  const top = (r) => r[0].getBoundingClientRect().top;
+  const laid = all.filter((r) => r[0].getBoundingClientRect().height > 0);
+  if (laid.length === all.length && all.length > 1) return all.reduce((a, b) => (top(b) > top(a) ? b : a));
+  return all[all.length - 1];
+}
+
+// Engagement counts { likes, replies, reposts } from the first three action-row controls,
+// or null when there is no recognizable action row.
+export function parseCounts(el) {
+  const row = findActionRow(el);
+  if (!row) return null;
+  const [likes, replies, reposts] = row.slice(0, 3).map((b) => parseCount(countText(b)));
+  if ([likes, replies, reposts].some((n) => n === null)) return null;
+  return { likes, replies, reposts };
 }
 
 const BTN = '[role="button"], button';

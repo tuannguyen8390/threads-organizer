@@ -51,3 +51,11 @@ test('parseImport accepts an empty export and rejects when every post is malform
   assert.deepEqual(parseImport('{"posts":[]}'), { posts: [], folders: [] });
   assert.throws(() => parseImport('{"posts":[5,{"id":"a"}]}'), /Not a Threads Organizer export/);
 });
+
+test('markdown prints an Engagement line with correct plurals after Link', () => {
+  const md = (counts) => toMarkdown([post('E1', { counts })], []);
+  assert.match(md({ likes: 219, replies: 2, reposts: 1 }), /Link: .*\nEngagement: 219 likes, 2 replies, 1 repost\n/);
+  assert.match(md({ likes: 1, replies: 1, reposts: 2 }), /Engagement: 1 like, 1 reply, 2 reposts/);
+  assert.match(md({ likes: 0, replies: 0, reposts: 0 }), /Engagement: 0 likes, 0 replies, 0 reposts/);
+  assert.doesNotMatch(md(undefined), /Engagement/);
+});

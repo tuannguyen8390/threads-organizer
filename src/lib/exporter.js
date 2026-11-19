@@ -1,4 +1,5 @@
 import { normalizePost } from './post.js';
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const day = (p) => {
   const d = new Date(p.postedAt ?? p.savedAt);
   return Number.isNaN(d.getTime()) ? 'unknown date' : d.toISOString().slice(0, 10);
@@ -19,6 +20,10 @@ export function toMarkdown(posts, folders) {
       out.push(`### @${p.author} · ${day(p)}`, '');
       if (p.text) out.push(...p.text.split('\n').map((l) => `> ${l}`), '');
       out.push(`Link: ${p.url}`);
+      if (p.counts) {
+        const { likes, replies, reposts } = p.counts;
+        out.push(`Engagement: ${plural(likes, 'like', 'likes')}, ${plural(replies, 'reply', 'replies')}, ${plural(reposts, 'repost', 'reposts')}`);
+      }
       const tags = p.tags ?? [];
       if (tags.length) out.push(`Tags: ${tags.map((t) => `#${t}`).join(' ')}`);
       if (p.note) out.push(`Note: ${p.note}`);

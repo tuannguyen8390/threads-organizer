@@ -113,3 +113,41 @@ test('findMenuAnchor returns null when nothing matches', () => {
   const doc = mk('<div id="post"><div role="button" aria-label="Like"><svg><path d="M0 0"/></svg></div></div>');
   assert.deepEqual(findMenuAnchorInfo(doc.getElementById('post')), { anchor: null, how: 'none' });
 });
+
+import { parseCounts } from '../src/content/selectors.js';
+
+const icon = '<svg><title>icon</title><path d="M0 0"/></svg>';
+const row = (counts) => counts.map((c) => `<div><div role="button">${icon}<span>${c}</span></div></div>`).join('');
+const postHtml = (inner) => `<div data-pressable-container="true" id="post">
+  <a href="/@alice/post/Cabc123"><time datetime="2026-11-01T10:00:00.000Z">2d</time></a>
+  <span dir="auto">hello</span>
+  <div role="button" id="menu"><svg><circle r="1"/><circle r="1"/><circle r="1"/></svg></div>${inner}</div>`;
+
+test('parseCounts reads like/reply/repost from the action row', () => {
+  const doc = mk(postHtml(`<div id="actions">${row(['219', '2', '1', '4'])}<div role="button">${icon}</div></div>`));
+  assert.deepEqual(parseCounts(doc.getElementById('post')), { likes: 219, replies: 2, reposts: 1 });
+});
+
+test('parseCounts treats an empty count as 0 and parses K/M/grouped', () => {
+  const p = (c) => parseCounts(mk(postHtml(`<div>${row(c)}</div>`)).getElementById('post'));
+  assert.deepEqual(p(['', '', '', '']), { likes: 0, replies: 0, reposts: 0 });
+  assert.deepEqual(p(['1.2K', '3,4M', '1,234', '5']), { likes: 1200, replies: 3400000, reposts: 1234 });
+});
+
+test('parseCounts picks the lowest row and ignores the header menu', () => {
+  const doc = mk(postHtml(`<div id="mid">${row(['9', '9', '9'])}</div><div id="low">${row(['7', '8', '9', '1'])}</div>`));
+  assert.deepEqual(parseCounts(doc.getElementById('post')), { likes: 7, replies: 8, reposts: 9 });
+});
+
+test('parseCounts returns null without an action row', () => {
+  assert.equal(parseCounts(mk(postHtml('')).getElementById('post')), null);
+  assert.equal(parseCounts(mk(postHtml(`<div>${row(['1', '2'])}</div>`)).getElementById('post')), null);
+  assert.equal(parseCounts(load().getElementById('p1')), null);
+});
+
+test('parsePost includes counts when an action row exists', () => {
+  const doc = mk(postHtml(`<div>${row(['219', '2', '1', '4'])}</div>`));
+  const p = parsePost(doc.getElementById('post'));
+  assert.deepEqual(p.counts, { likes: 219, replies: 2, reposts: 1 });
+  assert.equal('counts' in parsePost(findPostElements(load())[0]), false);
+});

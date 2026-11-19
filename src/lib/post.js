@@ -11,6 +11,13 @@ export function parsePermalink(href, base = 'https://www.threads.com') {
 
 const strings = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []);
 
+const count = (v) => Number.isFinite(v) && v >= 0;
+function normalizeCounts(c) {
+  if (!c || typeof c !== 'object') return null;
+  if (!count(c.likes) || !count(c.replies) || !count(c.reposts)) return null;
+  return { likes: Math.floor(c.likes), replies: Math.floor(c.replies), reposts: Math.floor(c.reposts) };
+}
+
 // Coerce an untrusted post object (e.g. from an imported file) into a safe shape.
 // Returns null when the post has no usable id/permalink.
 export function normalizePost(raw) {
@@ -30,5 +37,7 @@ export function normalizePost(raw) {
     savedAt: Number.isFinite(raw.savedAt) ? raw.savedAt : Date.now(),
   };
   if (typeof raw.postedAt === 'string') post.postedAt = raw.postedAt;
+  const counts = normalizeCounts(raw.counts);
+  if (counts) post.counts = counts;
   return post;
 }

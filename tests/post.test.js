@@ -56,3 +56,13 @@ test('normalizePost rejects unusable posts', () => {
     assert.equal(normalizePost(bad), null);
   }
 });
+
+test('normalizePost keeps valid counts (floored) and drops invalid ones', () => {
+  const base = { id: 'X1', url: '/@a/post/X1' };
+  assert.deepEqual(normalizePost({ ...base, counts: { likes: 5.9, replies: 0, reposts: 2, extra: 1 } }).counts,
+    { likes: 5, replies: 0, reposts: 2 });
+  for (const bad of [null, 5, 'x', {}, { likes: 1, replies: 2 }, { likes: -1, replies: 0, reposts: 0 },
+    { likes: '1', replies: 0, reposts: 0 }, { likes: NaN, replies: 0, reposts: 0 }, { likes: Infinity, replies: 0, reposts: 0 }]) {
+    assert.equal('counts' in normalizePost({ ...base, counts: bad }), false);
+  }
+});
