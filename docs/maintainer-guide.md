@@ -50,7 +50,9 @@ Other paths:
 | `.github/workflows/release.yml` | Release workflow. |
 | `docs/` | These guides. |
 
-All data is kept in `chrome.storage.local` under the key `threadsOrganizer`, as `{ posts, folders }`.
+All data is kept in `chrome.storage.local`, one key per item: `tops:post:<id>` holds a post and `tops:folder:<id>` holds a folder. `createStore(area)` in `src/lib/store.js` still returns `{ posts, folders }` maps keyed by id, built with no prototype so ids such as `__proto__` are plain data. Each write touches only the keys that changed (`area.set` for changed items, `area.remove` for deleted ones), so the panel and several Threads tabs can edit different posts at the same time without overwriting each other. Two contexts editing the same post still resolve as last writer wins for that post. Listen for changes with `isStoreChange(changes, areaName)` from the same module.
+
+**Migration from the old layout.** Versions before this change kept everything in one key, `threadsOrganizer` (`{ posts, folders }`). On the first read or write, the store copies each legacy post and folder to its new key only when that key does not exist yet (legacy posts get the same defaults as new saves), then removes `threadsOrganizer`. It never overwrites a new key, and the legacy key is removed only after the copy succeeded, so it is safe to repeat or to run from two contexts at once. Keep this code until you are sure no install still holds the old key.
 
 ## Set up the dev environment
 
@@ -188,7 +190,7 @@ Publish a ZIP that users can install.
 
 What `.github/workflows/release.yml` does when a tag starting with `v` is pushed:
 1. Checks that `v` plus the `version` in `manifest.json` equals the tag name. If not, the workflow fails and no release is made.
-2. Creates `threads-organizer-<tag>.zip` containing `manifest.json`, `src`, `LICENSE` and `README.md`. The `docs` and `tests` folders are not included.
+2. Creates `threads-organizer-<tag>.zip` containing `manifest.json`, `src`, `docs`, `LICENSE` and `README.md` (so the README's links to `docs/` work). Tests are not included. It runs `npm ci && npm test` first and builds with `zip -X`, so a failing test stops the release.
 3. Creates a GitHub Release for the tag with generated notes, and attaches the ZIP.
 
 The workflow has `contents: write` permission so it can create the release.

@@ -167,7 +167,7 @@ Collect these items before you open an issue. Use the issue template in `.github
 3. **Page type.** Feed, profile, post page, or Activity.
 4. **What happened and what you expected.**
 5. **Diagnostic attributes.** Right-click the icon > **Inspect**. Copy `data-to-anchor` and `data-to-counts`.
-6. **Screenshot.** Include the icon and the post's "..." menu.
+6. **Screenshot.** Include the icon and the post's "..." menu. Blur names, handles, photos and post text first; screenshots of Threads show other people's data.
 7. **Post markup (optional).** Run this in DevTools > **Console** on the Threads page:
 
    ```js
@@ -177,5 +177,6 @@ Collect these items before you open an issue. Use the issue template in `.github
    The command copies the HTML around the first post link on the page to the clipboard. Paste it into a text file.
    - It captures the first post on the page. Scroll so the post you want is the first one, or reload the page on that post's own address.
    - If the copy is too small to show the whole post, add another `.parentElement` before `.outerHTML`.
+   - Blur or replace names, handles, photos and post text before you share anything.
    - The copy can contain your name, other people's names, post text, image links and IDs. Remove or replace all of them before you share it.
    - If you are unsure, skip the markup and send the other items.

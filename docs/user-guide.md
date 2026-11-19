@@ -375,7 +375,9 @@ Know where your data is and remove it when you want to.
 
 **Where data is stored**
 - Saved posts, folders, tags and notes are in `chrome.storage.local` in your Chrome profile on this computer.
+- Each saved post and each folder is stored as its own item (`tops:post:...` and `tops:folder:...`). If you used an earlier version, the extension moves your saved posts to this layout automatically the first time it runs, without changing them.
 - The extension makes no network requests. Nothing is sent to a server.
+- Exports (Markdown and JSON) include your private notes, tags and folder names. Check a file before you share it.
 - Nothing syncs between devices. Use Export JSON and Import JSON to move data.
 
 **Steps to remove individual data**
