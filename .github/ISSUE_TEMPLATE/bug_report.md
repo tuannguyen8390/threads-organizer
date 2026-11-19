@@ -4,7 +4,7 @@ about: Report a problem with Threads Organizer
 labels: bug
 ---
 
-Read the [troubleshooting guide](../../docs/troubleshooting.md) first. It explains how to collect the items below.
+Read `docs/troubleshooting.md` in this repository first (relative links do not work inside issues). It explains how to collect the items below.
 
 ## Versions
 
@@ -28,7 +28,7 @@ Right-click the stack icon > **Inspect**, then copy the values from the button e
 
 ## Screenshot
 
-Attach a screenshot that shows the icon and the post's "..." menu.
+Attach a screenshot that shows the icon and the post's "..." menu. Before you attach it, blur names, handles, photos and post text.
 
 ## Post markup (optional)
 
