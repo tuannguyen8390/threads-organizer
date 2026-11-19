@@ -200,3 +200,32 @@ test('chooseHost: nested pair prefers menu anchor, then outermost, then first', 
   assert.deepEqual(chooseHost([i2, o2]), [o2]);
   assert.deepEqual(chooseHost([z, o2, i2]), [o2, z].sort((a, b) => (a.compareDocumentPosition(b) & 4 ? -1 : 1)));
 });
+
+const labeled = (label) => `<svg aria-label="${label}"><path d="M0 0"/></svg>`;
+const wrap = (label, num) => `<div><div role="button">${labeled(label)}</div><span>${num}</span></div>`;
+
+test('parseCounts: labeled icons in div[role=button] with numbers in sibling spans', () => {
+  const doc = mk(postHtml(`<div id="a">${wrap('Thích', '219')}${wrap('Trả lời', '2')}${wrap('Đăng lại', '1,2K')}${wrap('Chia sẻ', '')}</div>`));
+  assert.deepEqual(parseCounts(doc.getElementById('post')), { likes: 219, replies: 2, reposts: 1200 });
+});
+
+test('parseCounts: numbers inside the controls, icons unlabeled', () => {
+  const doc = mk(postHtml(`<div><div tabindex="0">${icon}<span>7</span></div><div tabindex="0">${icon}<span>8</span></div><div tabindex="0">${icon}<span>9</span></div></div>`));
+  assert.deepEqual(parseCounts(doc.getElementById('post')), { likes: 7, replies: 8, reposts: 9 });
+});
+
+test('parseCounts: unlabeled icons with numbers in following siblings', () => {
+  const sib = (n) => `<div><div tabindex="0">${icon}</div><span>${n}</span></div>`;
+  const doc = mk(postHtml(`<div>${sib('3')}${sib('4')}${sib('5')}</div>`));
+  assert.deepEqual(parseCounts(doc.getElementById('post')), { likes: 3, replies: 4, reposts: 5 });
+});
+
+test('parseCounts: icons found but numbers missing gives 0', () => {
+  const doc = mk(postHtml(`<div>${wrap('Like', '')}${wrap('Reply', '')}${wrap('Repost', '')}</div>`));
+  assert.deepEqual(parseCounts(doc.getElementById('post')), { likes: 0, replies: 0, reposts: 0 });
+});
+
+test('parseCounts: no icons gives null', () => {
+  const doc = mk(postHtml('<div><span>12</span><span>3</span></div>'));
+  assert.equal(parseCounts(doc.getElementById('post')), null);
+});

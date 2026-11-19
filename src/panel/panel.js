@@ -113,7 +113,7 @@ function setMeta(node, p) {
   node.dataset.key = key;
   const kids = [document.createTextNode(label)];
   if (counts) {
-    const box = el('span', { className: 'counts', title: 'Counts when you saved this post' });
+    const box = el('span', { className: 'counts', title: 'Counts when last seen on Threads' });
     for (const k of COUNT_KEYS) {
       box.append(el('span', { className: 'sep', textContent: '|' }), icon(k),
         el('span', { className: 'num', textContent: formatCount(counts[k]) }));

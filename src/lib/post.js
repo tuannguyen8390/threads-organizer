@@ -12,7 +12,7 @@ export function parsePermalink(href, base = 'https://www.threads.com') {
 const strings = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []);
 
 const count = (v) => Number.isFinite(v) && v >= 0;
-function normalizeCounts(c) {
+export function normalizeCounts(c) {
   if (!c || typeof c !== 'object') return null;
   if (!count(c.likes) || !count(c.replies) || !count(c.reposts)) return null;
   return { likes: Math.floor(c.likes), replies: Math.floor(c.replies), reposts: Math.floor(c.reposts) };

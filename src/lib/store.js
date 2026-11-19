@@ -1,3 +1,5 @@
+import { normalizeCounts } from './post.js';
+
 const KEY = 'threadsOrganizer';
 const EDITABLE = ['folderId', 'tags', 'note'];
 const emptyDb = () => ({ posts: {}, folders: {} });
@@ -42,6 +44,13 @@ export function createStore(area) {
       const p = db.posts[id];
       if (!p) return null;
       for (const k of EDITABLE) if (k in patch) p[k] = patch[k];
+      return p;
+    }),
+    updateCounts: (id, counts) => mutate((db) => {
+      const p = db.posts[id];
+      const c = normalizeCounts(counts);
+      if (!p || !c) return null;
+      p.counts = c;
       return p;
     }),
     deletePost: (id) => mutate((db) => { delete db.posts[id]; }),

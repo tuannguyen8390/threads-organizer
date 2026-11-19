@@ -87,20 +87,42 @@ export function parsePost(el) {
 }
 
 const ACTION_BTN = 'button, [role="button"]';
+const ACTION_ANY = 'button, [role="button"], a, [tabindex]';
 const ACTION_DEPTH = 3;
+const KINDS = ['likes', 'replies', 'reposts'];
 
-const countText = (btn) => {
-  const clone = btn.cloneNode(true);
+const textOf = (node) => {
+  const clone = node.cloneNode(true);
   for (const s of clone.querySelectorAll('svg')) s.remove();
   return clone.textContent;
 };
 
+// The count shown in some text: undefined when it holds no digit, else the parsed number.
+function numberIn(text) {
+  const t = String(text ?? '').trim();
+  if (!/\d/.test(t)) return undefined;
+  const whole = parseCount(t);
+  if (whole !== null) return whole;
+  const m = /\d[\d.,]*(?:\s?(?:tr|k|m|b|n)(?![a-z]))?/i.exec(t);
+  return m ? parseCount(m[0]) ?? undefined : undefined;
+}
+
+const isoTop = (n) => n.getBoundingClientRect().top;
+
+// The lowest of several rows/candidates: by layout when all are laid out, else the last in DOM order.
+function lowest(list, rectOf = (x) => x) {
+  if (list.length === 1) return list[0];
+  const laid = list.every((x) => rectOf(x).getBoundingClientRect().height > 0);
+  return laid ? list.reduce((a, b) => (isoTop(rectOf(b)) > isoTop(rectOf(a)) ? b : a)) : list[list.length - 1];
+}
+
 // The post's action row (like, reply, repost, share, ...) found by structure, not by labels:
-// the smallest ancestor (up to ACTION_DEPTH levels up) holding >= 3 icon buttons. When a post
-// has several such rows, the lowest wins (layout if available, else the last in DOM order).
-function findActionRow(el) {
-  const btns = [...el.querySelectorAll(ACTION_BTN)].filter((b) =>
-    b.querySelector('svg') && !b.closest('.to-save-btn') && !b.parentElement?.closest(ACTION_BTN));
+// the smallest ancestor (up to ACTION_DEPTH levels up) holding >= 3 icon controls. When a post
+// has several such rows, the lowest wins. Returns the controls of that row, or null.
+function findActionRow(el, selector = ACTION_BTN) {
+  const found = [...el.querySelectorAll(selector)].filter((b) =>
+    b.querySelector('svg') && !b.closest('.to-save-btn'));
+  const btns = found.filter((b) => !found.some((o) => o !== b && o.contains(b)));
   const rows = new Map();
   for (const b of btns) {
     let n = b.parentElement;
@@ -110,21 +132,90 @@ function findActionRow(el) {
     }
   }
   const all = [...rows.values()];
-  if (!all.length) return null;
-  const top = (r) => r[0].getBoundingClientRect().top;
-  const laid = all.filter((r) => r[0].getBoundingClientRect().height > 0);
-  if (laid.length === all.length && all.length > 1) return all.reduce((a, b) => (top(b) > top(a) ? b : a));
-  return all[all.length - 1];
+  return all.length ? lowest(all, (r) => r[0]) : null;
 }
 
-// Engagement counts { likes, replies, reposts } from the first three action-row controls,
-// or null when there is no recognizable action row.
-export function parseCounts(el) {
+// Strategy results are { counts, seen } where seen is true when at least one number was read.
+const result = (nums) => ({ counts: Object.fromEntries(KINDS.map((k, i) => [k, nums[i] ?? 0])), seen: nums.some((n) => n !== undefined) });
+
+// (i) numbers inside the first three controls of the action row.
+function countsFromRow(el) {
   const row = findActionRow(el);
   if (!row) return null;
-  const [likes, replies, reposts] = row.slice(0, 3).map((b) => parseCount(countText(b)));
-  if ([likes, replies, reposts].some((n) => n === null)) return null;
-  return { likes, replies, reposts };
+  const nums = row.slice(0, 3).map((b) => {
+    const t = textOf(b).trim();
+    return t ? numberIn(t) ?? NaN : undefined;
+  });
+  if (nums.some(Number.isNaN)) return null;
+  return result(nums);
+}
+
+const LABELS = {
+  likes: ['like', 'unlike', 'thích', 'bỏ thích', 'me gusta', "j'aime", 'gefällt', 'curtir'],
+  replies: ['reply', 'replies', 'comment', 'trả lời', 'bình luận', 'responder', 'répondre', 'antworten'],
+  reposts: ['repost', 'đăng lại', 'republier', 'reposter', 'repostar', 'reposten'],
+};
+const kindOfLabel = (v) => {
+  const t = (v ?? '').trim().toLowerCase();
+  if (!t) return null;
+  return KINDS.find((k) => LABELS[k].some((l) => t === l || t.startsWith(`${l} `) || t.startsWith(`${l}:`))) ?? null;
+};
+
+// (ii) icons found by aria-label (any language listed); the number comes from the nearest
+// ancestor (<= 3 levels) with a digit that does not also hold another of the three icons.
+function countsFromLabels(el) {
+  const icons = {};
+  for (const k of KINDS) icons[k] = [];
+  for (const n of el.querySelectorAll('[aria-label]')) {
+    if (n.closest('.to-save-btn')) continue;
+    const k = kindOfLabel(n.getAttribute('aria-label'));
+    if (k) icons[k].push(n);
+  }
+  if (KINDS.some((k) => !icons[k].length)) return null;
+  // One element per kind: the lowest, preferring the outermost when labels are nested.
+  const pick = Object.fromEntries(KINDS.map((k) => {
+    const outer = icons[k].filter((n) => !icons[k].some((o) => o !== n && o.contains(n)));
+    return [k, lowest(outer)];
+  }));
+  const nums = KINDS.map((k) => {
+    const others = KINDS.filter((o) => o !== k).map((o) => pick[o]);
+    let n = pick[k];
+    for (let i = 0; n && i <= ACTION_DEPTH && n !== el; i++, n = n.parentElement) {
+      if (others.some((o) => n.contains(o))) return undefined;
+      const v = numberIn(textOf(n));
+      if (v !== undefined) return v;
+    }
+    return undefined;
+  });
+  return result(nums);
+}
+
+// (iii) the first three icon controls of the lowest group of >= 3; number from the control's
+// own text or from the text right after it.
+function countsFromOrder(el) {
+  const row = findActionRow(el, ACTION_ANY);
+  if (!row) return null;
+  const nums = row.slice(0, 3).map((b) => {
+    const own = numberIn(textOf(b));
+    if (own !== undefined) return own;
+    const sib = b.nextElementSibling;
+    if (sib && !row.includes(sib) && !sib.querySelector('svg') && !sib.matches(ACTION_ANY)) return numberIn(sib.textContent);
+    return undefined;
+  });
+  return result(nums);
+}
+
+// Engagement counts { likes, replies, reposts }, or null when no strategy finds the like/reply/repost icons.
+// The first strategy that actually reads a number wins; otherwise the first that found icons (all zeros).
+export function parseCounts(el) {
+  let fallback = null;
+  for (const strategy of [countsFromRow, countsFromLabels, countsFromOrder]) {
+    const r = strategy(el);
+    if (!r) continue;
+    if (r.seen) return r.counts;
+    fallback ??= r.counts;
+  }
+  return fallback;
 }
 
 const BTN = '[role="button"], button';

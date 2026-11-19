@@ -79,9 +79,20 @@ const relatedHasButton = (el) => [...document.querySelectorAll('.to-save-btn')].
   return host !== el && (host.contains(el) || el.contains(host));
 });
 
-function decorate(el, savedIds) {
+const sameCounts = (a, b) => Boolean(a && b) && ['likes', 'replies', 'reposts'].every((k) => a[k] === b[k]);
+
+// Diagnostic for DevTools: what parseCounts read for this post, e.g. "219/2/1" or "none".
+const setCountsAttr = (btn, c) => { btn.dataset.toCounts = c ? `${c.likes}/${c.replies}/${c.reposts}` : 'none'; };
+
+// `updates` collects counts to persist for saved posts whose stored counts are missing or stale.
+function decorate(el, db, updates) {
+  const savedIds = new Set(Object.keys(db.posts));
   const post = parsePost(el);
   if (!post) return;
+  const stored = db.posts[post.id];
+  if (stored && post.counts && !sameCounts(post.counts, stored.counts) && !updates.has(post.id)) {
+    updates.set(post.id, post.counts);
+  }
   // React may re-create or recycle nodes: re-check on every scan.
   const existing = el.querySelector(':scope > .to-save-btn');
   if (existing) {
@@ -90,6 +101,7 @@ function decorate(el, savedIds) {
       existing.dataset.toBtn = post.id;
       setLabel(existing, savedIds.has(post.id));
     }
+    setCountsAttr(existing, post.counts);
     placeButton(existing, el);
     return;
   }
@@ -103,6 +115,7 @@ function decorate(el, savedIds) {
   btn.dataset.toBtn = post.id;
   btn.appendChild(buildIcon());
   setLabel(btn, savedIds.has(post.id));
+  setCountsAttr(btn, post.counts);
   btn.addEventListener('click', async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -131,7 +144,6 @@ function decorate(el, savedIds) {
 
 async function scan() {
   const db = await store.getAll();
-  const savedIds = new Set(Object.keys(db.posts));
   const hosts = findPostElements(document);
   // Drop stray buttons left on elements that are no longer post hosts (e.g. duplicates from before a rescan).
   for (const b of document.querySelectorAll('.to-save-btn')) {
@@ -140,7 +152,10 @@ async function scan() {
       b.remove();
     }
   }
-  for (const el of hosts) decorate(el, savedIds);
+  const updates = new Map();
+  for (const el of hosts) decorate(el, db, updates);
+  // At most one write per changed post; the onChanged listener only relabels, so this cannot loop.
+  for (const [id, counts] of updates) await store.updateCounts(id, counts).catch(console.error);
   mountImportButton(store);
 }
 

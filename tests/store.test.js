@@ -78,3 +78,23 @@ test('insert tolerates non-array tags', async () => {
   await s.savePost({ id: 'T', url: 'u', author: 'a', text: '', tags: 'oops' });
   assert.deepEqual((await s.getAll()).posts.T.tags, []);
 });
+
+test('updateCounts sets counts on an existing post only', async () => {
+  const s = createStore(memArea());
+  await s.savePost(post('P1'));
+  const r = await s.updateCounts('P1', { likes: 5, replies: 2.9, reposts: 0 });
+  assert.deepEqual(r.counts, { likes: 5, replies: 2, reposts: 0 });
+  assert.deepEqual((await s.getAll()).posts.P1.counts, { likes: 5, replies: 2, reposts: 0 });
+  assert.equal(await s.updateCounts('NOPE', { likes: 1, replies: 1, reposts: 1 }), null);
+  assert.equal((await s.getAll()).posts.NOPE, undefined);
+});
+
+test('updateCounts rejects invalid counts without changing the post', async () => {
+  const s = createStore(memArea());
+  await s.savePost(post('P1', { counts: { likes: 1, replies: 1, reposts: 1 } }));
+  for (const bad of [null, {}, { likes: -1, replies: 0, reposts: 0 }, { likes: NaN, replies: 0, reposts: 0 },
+    { likes: '3', replies: 0, reposts: 0 }, { likes: 1, replies: 0 }]) {
+    assert.equal(await s.updateCounts('P1', bad), null);
+  }
+  assert.deepEqual((await s.getAll()).posts.P1.counts, { likes: 1, replies: 1, reposts: 1 });
+});
