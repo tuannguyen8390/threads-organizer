@@ -36,7 +36,10 @@ function setChips(box, key, build) {
 
 function renderFolders() {
   const fs = folderList();
-  const key = JSON.stringify([state.folderId, state.tag, fs.map((f) => [f.id, f.name])]);
+  // JSON.stringify turns undefined into null inside arrays, which made "All" (undefined) and
+  // "To sort" (null) share a key, so the active chip never moved between them.
+  const scope = state.folderId === undefined ? 'all' : state.folderId === null ? 'to-sort' : `folder:${state.folderId}`;
+  const key = JSON.stringify([scope, state.tag ?? 'no-tag', fs.map((f) => [f.id, f.name])]);
   setChips($('folders'), key, () => [
     chip('All', state.folderId === undefined && state.tag === undefined,
       () => { state.folderId = undefined; state.tag = undefined; render(); }),
