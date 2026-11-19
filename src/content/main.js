@@ -12,7 +12,7 @@ const svgPath = (d) => {
   return p;
 };
 
-// Bookmark outline with a "+" (unsaved) or a check (saved); built once, updated in place.
+// Stack of three cards (a collection); the top card is filled when saved. Built once, updated in place.
 function buildIcon() {
   const svg = document.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('viewBox', '0 0 24 24');
@@ -25,13 +25,12 @@ function buildIcon() {
   svg.setAttribute('stroke-linejoin', 'round');
   svg.setAttribute('aria-hidden', 'true');
   svg.setAttribute('focusable', 'false');
-  const body = svgPath('M6 3.5h12a1 1 0 0 1 1 1V21l-7-4.6L5 21V4.5a1 1 0 0 1 1-1z');
+  // Top card; filled when saved.
+  const body = svgPath('M12 4l8 4-8 4-8-4z');
   body.setAttribute('class', 'to-icon-body');
-  const plus = svgPath('M12 7v6M9 10h6');
-  plus.setAttribute('class', 'to-icon-plus');
-  const check = svgPath('M8.8 9.6l2.2 2.2 4.2-4.4');
-  check.setAttribute('class', 'to-icon-check');
-  svg.append(body, plus, check);
+  const mid = svgPath('M4 12l8 4 8-4');
+  const low = svgPath('M4 16l8 4 8-4');
+  svg.append(body, mid, low);
   return svg;
 }
 
