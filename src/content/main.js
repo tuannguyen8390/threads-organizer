@@ -1,4 +1,4 @@
-import { createStore } from '../lib/store.js';
+import { createStore, isStoreChange } from '../lib/store.js';
 import { findPostElements, parsePost, findMenuAnchorInfo, findRowNeighbors } from './selectors.js';
 
 const store = createStore(chrome.storage.local);
@@ -118,9 +118,13 @@ function decorate(el, db, updates) {
   btn.addEventListener('click', async (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!e.isTrusted) return; // page scripts can dispatch synthetic clicks; only real user clicks count
+    if (!alive()) return;
     try {
       const fresh = parsePost(el);
       if (!fresh) throw new Error('parse failed');
+      // The page controls the permalink; never act on a post other than the one this button was drawn for.
+      if (fresh.id !== btn.dataset.toBtn) throw new Error('post changed');
       const db = await store.getAll();
       const saved = db.posts[fresh.id];
       if (saved) {
@@ -141,7 +145,27 @@ function decorate(el, db, updates) {
   placeButton(btn, el);
 }
 
+// After an extension update or reload the old content script lingers in open tabs and every
+// chrome.* call throws. Detect that, stop observing and remove our buttons.
+function alive() {
+  if (chrome.runtime?.id) return true;
+  observer.disconnect();
+  clearTimeout(timer);
+  clearTimeout(resizeTimer);
+  for (const b of document.querySelectorAll('.to-save-btn')) b.remove();
+  return false;
+}
+
 async function scan() {
+  if (!alive()) return;
+  try {
+    await scanOnce();
+  } catch (err) {
+    if (alive()) console.error('[Threads Organizer]', err);
+  }
+}
+
+async function scanOnce() {
   const db = await store.getAll();
   const hosts = findPostElements(document);
   // Drop stray buttons left on elements that are no longer post hosts (e.g. duplicates from before a rescan).
@@ -154,18 +178,19 @@ async function scan() {
   const updates = new Map();
   for (const el of hosts) decorate(el, db, updates);
   // At most one write per changed post; the onChanged listener only relabels, so this cannot loop.
-  for (const [id, counts] of updates) await store.updateCounts(id, counts).catch(console.error);
+  for (const [id, counts] of updates) await store.updateCounts(id, counts);
 }
 
 let timer;
-const scheduleScan = () => { clearTimeout(timer); timer = setTimeout(scan, 300); };
-new MutationObserver(scheduleScan).observe(document.body, { childList: true, subtree: true });
-scan();
 let resizeTimer;
+const scheduleScan = () => { clearTimeout(timer); timer = setTimeout(scan, 300); };
+const observer = new MutationObserver(scheduleScan);
+observer.observe(document.body, { childList: true, subtree: true });
+scan();
 window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(scan, 200); });
 
-chrome.storage.onChanged.addListener((_changes, areaName) => {
-  if (areaName !== 'local') return;
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (!isStoreChange(changes, areaName) || !alive()) return;
   store.getAll().then((db) => {
     for (const btn of document.querySelectorAll('.to-save-btn')) {
       setLabel(btn, Boolean(db.posts[btn.dataset.toBtn]));

@@ -59,3 +59,21 @@ test('markdown prints an Engagement line with correct plurals after Link', () =>
   assert.match(md({ likes: 0, replies: 0, reposts: 0 }), /Engagement: 0 likes, 0 replies, 0 reposts/);
   assert.doesNotMatch(md(undefined), /Engagement/);
 });
+
+test('markdown cannot be given headings, links or HTML through author, folder, tags or note', () => {
+  const evil = 'x\n## Fake\n[Login](https://evil)';
+  const md = toMarkdown(
+    [post('E1', { author: evil, folderId: 'F', tags: [evil, '<img src=x onerror=1>'], note: evil, text: 'a\r\n## not a heading\n<b>x</b>' })],
+    [{ id: 'F', name: evil }],
+  );
+  const lines = md.split('\n');
+  assert.deepEqual(lines.filter((l) => /^#{1,6} /.test(l)).map((l) => l.split(' ')[0]), ['#', '##', '###']);
+  assert.doesNotMatch(md, /(^|[^\\])\[Login\]\(/m);
+  assert.doesNotMatch(md, /(^|[^\\])</m); // every "<" is escaped
+  assert.match(md, /> a\n> ## not a heading\n> \\<b>x/);
+});
+
+test('a multi-line note is blockquoted and escaped', () => {
+  const md = toMarkdown([post('E2', { note: 'one\n# two\n[a](b)' })], []);
+  assert.match(md, /Note:\n> one\n> \\# two\n> \\\[a\\\]\\\(b\\\)\n/);
+});

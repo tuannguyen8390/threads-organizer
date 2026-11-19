@@ -5,6 +5,13 @@ const day = (p) => {
   return Number.isNaN(d.getTime()) ? 'unknown date' : d.toISOString().slice(0, 10);
 };
 
+// Untrusted text (imported files, folder names, notes) must not create structure or links in the
+// exported Markdown: single-line fields lose their line breaks, and Markdown/HTML punctuation is escaped.
+const LINE_BREAKS = /\r\n|[\r\n\u2028\u2029\u0085\v\f]/;
+const esc = (s) => String(s).replace(/[\\`*_[\]()<>#!|~]/g, '\\$&');
+const oneLine = (s) => esc(String(s).split(LINE_BREAKS).map((l) => l.trim()).filter(Boolean).join(' '));
+const quote = (s, escape) => String(s).split(LINE_BREAKS).map((l) => `> ${escape ? esc(l) : l.replace(/</g, '\\<')}`);
+
 export function toMarkdown(posts, folders) {
   const names = new Map(folders.map((f) => [f.id, f.name]));
   const groups = new Map();
@@ -15,18 +22,22 @@ export function toMarkdown(posts, folders) {
   }
   const out = ['# Threads export', ''];
   for (const [name, list] of groups) {
-    out.push(`## ${name}`, '');
+    out.push(`## ${oneLine(name)}`, '');
     for (const p of list) {
-      out.push(`### @${p.author} · ${day(p)}`, '');
-      if (p.text) out.push(...p.text.split('\n').map((l) => `> ${l}`), '');
+      out.push(`### @${oneLine(p.author)} · ${day(p)}`, '');
+      if (p.text) out.push(...quote(p.text, false), '');
       out.push(`Link: ${p.url}`);
       if (p.counts) {
         const { likes, replies, reposts } = p.counts;
         out.push(`Engagement: ${plural(likes, 'like', 'likes')}, ${plural(replies, 'reply', 'replies')}, ${plural(reposts, 'repost', 'reposts')}`);
       }
       const tags = p.tags ?? [];
-      if (tags.length) out.push(`Tags: ${tags.map((t) => `#${t}`).join(' ')}`);
-      if (p.note) out.push(`Note: ${p.note}`);
+      if (tags.length) out.push(`Tags: ${tags.map((t) => `#${oneLine(t).replace(/ /g, '-')}`).join(' ')}`);
+      if (p.note) {
+        const lines = String(p.note).split(LINE_BREAKS).filter((l) => l.trim());
+        if (lines.length === 1) out.push(`Note: ${oneLine(lines[0])}`);
+        else if (lines.length) out.push('Note:', ...quote(lines.join('\n'), true));
+      }
       out.push('');
     }
   }

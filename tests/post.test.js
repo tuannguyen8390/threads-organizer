@@ -40,7 +40,7 @@ test('normalizePost sanitizes wrong-typed fields', () => {
     id: 'X1', url: '/@a/post/X1', author: 'zed', text: 5, note: {}, tags: ['a', 'a', '', 3, 'b'],
     media: ['u', 4], folderId: 7, savedAt: 'x', postedAt: 12,
   });
-  assert.equal(p.author, 'zed');
+  assert.equal(p.author, 'a'); // author always comes from the permalink, never from the file
   assert.equal(p.text, '');
   assert.equal(p.note, '');
   assert.deepEqual(p.tags, ['a', 'b']);
@@ -65,4 +65,17 @@ test('normalizePost keeps valid counts (floored) and drops invalid ones', () => 
     { likes: '1', replies: 0, reposts: 0 }, { likes: NaN, replies: 0, reposts: 0 }, { likes: Infinity, replies: 0, reposts: 0 }]) {
     assert.equal('counts' in normalizePost({ ...base, counts: bad }), false);
   }
+});
+
+test('normalizePost rejects an id that disagrees with the permalink', () => {
+  assert.equal(normalizePost({ id: 'VICTIM', url: '/@a/post/X1' }), null);
+  assert.equal(normalizePost({ url: '/@a/post/X1' }), null);
+  assert.equal(normalizePost({ id: '__proto__', url: '/@a/post/X1' }), null);
+});
+
+test('normalizePost derives author from the permalink and copies only named fields', () => {
+  const p = normalizePost({ id: 'X1', url: '/@real/post/X1', author: 'spoof', evil: 1, __proto__: { polluted: true } });
+  assert.equal(p.author, 'real');
+  assert.deepEqual(Object.keys(p).sort(), ['author', 'folderId', 'id', 'media', 'note', 'savedAt', 'tags', 'text', 'url']);
+  assert.equal(({}).polluted, undefined);
 });

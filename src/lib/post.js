@@ -25,10 +25,12 @@ export function normalizePost(raw) {
   if (typeof raw.id !== 'string' || typeof raw.url !== 'string') return null;
   const link = parsePermalink(raw.url);
   if (!link) return null;
+  // The permalink is the source of truth; an id or author that disagrees with it is forged or corrupt.
+  if (raw.id !== link.id) return null;
   const post = {
-    id: raw.id,
+    id: link.id,
     url: link.url,
-    author: typeof raw.author === 'string' && raw.author ? raw.author : link.author,
+    author: link.author,
     text: typeof raw.text === 'string' ? raw.text : '',
     note: typeof raw.note === 'string' ? raw.note : '',
     tags: [...new Set(strings(raw.tags).filter(Boolean))],
