@@ -45,15 +45,70 @@ export function parsePost(el) {
 
 const BTN = '[role="button"], button';
 
-// The post's "…" (More) menu button, or null. Used to position our button below it.
-export function findMenuAnchor(el) {
-  const label = el.querySelector('[aria-label="More"]');
-  if (label) return label.closest(BTN) || label;
-  for (const svg of el.querySelectorAll('svg[aria-label]')) {
-    if (/^more$/i.test(svg.getAttribute('aria-label').trim())) return svg.closest(BTN) || svg;
+const MORE_LABELS = ['More', 'More options', 'Thêm', 'Mehr', 'Más', 'Plus', 'Mais', 'Meer', 'Altro', 'Więcej',
+  'Daha fazla', '更多', 'もっと見る', '더 보기', 'المزيد', 'Ещё'].map((l) => l.toLowerCase());
+const isMoreLabel = (v) => {
+  const t = (v ?? '').trim().toLowerCase();
+  return Boolean(t) && MORE_LABELS.some((l) => t === l || t.startsWith(l));
+};
+const mine = (n) => Boolean(n.closest('.to-save-btn'));
+
+function byLabel(el) {
+  for (const n of el.querySelectorAll('[aria-label], [title], svg title')) {
+    if (mine(n)) continue;
+    const v = n.localName === 'title' ? n.textContent : (n.getAttribute('aria-label') || n.getAttribute('title'));
+    if (isMoreLabel(v)) return n.closest(BTN) || (n.localName === 'title' ? n.parentElement : n);
   }
-  const btn = [...el.querySelectorAll(BTN)].find((b) => /^more$/i.test((b.getAttribute('aria-label') ?? '').trim()));
-  return btn ?? null;
+  return null;
+}
+
+function drawsThreeDots(svg) {
+  if (svg.querySelectorAll('circle').length >= 3) return true;
+  for (const tag of ['ellipse', 'rect']) {
+    const sizes = [...svg.querySelectorAll(tag)].map((n) =>
+      tag === 'ellipse' ? `${n.getAttribute('rx')}x${n.getAttribute('ry')}` : `${n.getAttribute('width')}x${n.getAttribute('height')}`);
+    if (sizes.some((sz) => sizes.filter((o) => o === sz).length >= 3)) return true;
+  }
+  return false;
+}
+
+function byDots(el) {
+  for (const svg of el.querySelectorAll('svg')) {
+    if (mine(svg) || !drawsThreeDots(svg)) continue;
+    return svg.closest(BTN) || svg.parentElement;
+  }
+  return null;
+}
+
+function byGeometry(el) {
+  const box = el.getBoundingClientRect();
+  if (!box.width) return null;
+  let best = null;
+  let bestRect = null;
+  for (const b of el.querySelectorAll(BTN)) {
+    if (mine(b)) continue;
+    const r = b.getBoundingClientRect();
+    if (!r.width || r.width > 48 || r.height > 48 || r.top - box.top > 80) continue;
+    if (!best || r.right > bestRect.right || (r.right === bestRect.right && r.top > bestRect.top)) {
+      best = b;
+      bestRect = r;
+    }
+  }
+  return best;
+}
+
+// The post's "…" (More) menu button as { anchor, how }; how is label | dots | geometry | none.
+export function findMenuAnchorInfo(el) {
+  for (const [how, find] of [['label', byLabel], ['dots', byDots], ['geometry', byGeometry]]) {
+    const anchor = find(el);
+    if (anchor) return { anchor, how };
+  }
+  return { anchor: null, how: 'none' };
+}
+
+// The post's "…" (More) menu button, or null. Used to position our button beside it.
+export function findMenuAnchor(el) {
+  return findMenuAnchorInfo(el).anchor;
 }
 
 const ROW_TOL = 18;

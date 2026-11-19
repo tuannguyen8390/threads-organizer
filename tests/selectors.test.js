@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
-import { findPostElements, parsePost, findMenuAnchor, findRowNeighbors } from '../src/content/selectors.js';
+import { findPostElements, parsePost, findMenuAnchor, findMenuAnchorInfo, findRowNeighbors } from '../src/content/selectors.js';
 
 const load = () => new JSDOM(readFileSync(new URL('./fixtures/post.html', import.meta.url), 'utf8')).window.document;
 
@@ -67,4 +67,49 @@ test('findRowNeighbors returns icon-ish controls left of the anchor in the same 
   rect($('far-row'), 860, 300, 24, 24);
   const ids = findRowNeighbors($('post'), anchor).map((e) => e.id).sort();
   assert.deepEqual(ids, ['pencil', 'thumb', 'thumb-img'].sort());
+});
+
+const mk = (html) => new JSDOM(html).window.document;
+const NS = 'http://www.w3.org/2000/svg';
+
+test('findMenuAnchor finds a localized label', () => {
+  const doc = mk('<div id="post"><div role="button" id="menu" aria-label="Thêm"></div><div role="button" aria-label="Like"></div></div>');
+  const info = findMenuAnchorInfo(doc.getElementById('post'));
+  assert.equal(info.anchor.id, 'menu');
+  assert.equal(info.how, 'label');
+});
+
+test('findMenuAnchor finds an unlabeled button with a three-dot svg', () => {
+  const doc = mk(`<div id="post"><div role="button" id="like"><svg><path d="M0 0"/></svg></div>
+    <div role="button" id="menu"><svg><circle r="1"/><circle r="1"/><circle r="1"/></svg></div></div>`);
+  const info = findMenuAnchorInfo(doc.getElementById('post'));
+  assert.equal(info.anchor.id, 'menu');
+  assert.equal(info.how, 'dots');
+});
+
+test('findMenuAnchor geometric fallback picks the rightmost small button in the header', () => {
+  const doc = mk(`<div id="post"><div role="button" id="a"></div><div role="button" id="b"></div>
+    <div role="button" id="big"></div><div role="button" id="low"></div></div>`);
+  const $ = (id) => doc.getElementById(id);
+  rect($('post'), 0, 100, 600, 400);
+  rect($('a'), 400, 110, 24, 24);
+  rect($('b'), 540, 112, 24, 24);
+  rect($('big'), 560, 105, 120, 60);
+  rect($('low'), 570, 400, 24, 24);
+  const info = findMenuAnchorInfo($('post'));
+  assert.equal(info.anchor.id, 'b');
+  assert.equal(info.how, 'geometry');
+  assert.equal(findMenuAnchor($('post')).id, 'b');
+});
+
+test('findMenuAnchor never returns our own button', () => {
+  const doc = mk(`<div id="post"><button class="to-save-btn" id="mine" aria-label="More"><svg><circle/><circle/><circle/></svg></button></div>`);
+  rect(doc.getElementById('post'), 0, 0, 600, 400);
+  rect(doc.getElementById('mine'), 500, 5, 32, 32);
+  assert.equal(findMenuAnchor(doc.getElementById('post')), null);
+});
+
+test('findMenuAnchor returns null when nothing matches', () => {
+  const doc = mk('<div id="post"><div role="button" aria-label="Like"><svg><path d="M0 0"/></svg></div></div>');
+  assert.deepEqual(findMenuAnchorInfo(doc.getElementById('post')), { anchor: null, how: 'none' });
 });

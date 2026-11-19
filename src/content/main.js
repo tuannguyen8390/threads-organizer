@@ -1,5 +1,5 @@
 import { createStore } from '../lib/store.js';
-import { findPostElements, parsePost, findMenuAnchor, findRowNeighbors } from './selectors.js';
+import { findPostElements, parsePost, findMenuAnchorInfo, findRowNeighbors } from './selectors.js';
 import { mountImportButton } from './import-ui.js';
 
 const store = createStore(chrome.storage.local);
@@ -52,7 +52,9 @@ const setError = (btn, message) => {
 // Place the icon left of the post's "..." (and of any icon/thumbnail just left of it),
 // vertically centered on it, using real geometry; CSS default otherwise.
 const GAP = 6;
-function placeButton(btn, el, anchor = findMenuAnchor(el)) {
+function placeButton(btn, el) {
+  const { anchor, how } = findMenuAnchorInfo(el);
+  btn.dataset.toAnchor = how;
   if (!anchor) {
     btn.style.top = '';
     btn.style.right = '';
