@@ -1,17 +1,24 @@
-.to-save-btn {
-  position: absolute; top: 12px; right: 48px; z-index: 2;
-  width: 32px; height: 32px; padding: 0; margin: 0; border: 0; border-radius: 50%;
-  display: inline-flex; align-items: center; justify-content: center;
-  background: transparent; cursor: pointer;
-  color: color-mix(in srgb, CanvasText 55%, transparent);
+button.to-save-btn.to-save-btn {
+  box-sizing: border-box !important;
+  position: absolute !important; top: 12px; right: 48px; z-index: 2 !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  width: 32px !important; height: 32px !important;
+  min-width: 32px !important; min-height: 32px !important;
+  max-width: 32px !important; max-height: 32px !important;
+  padding: 0 !important; margin: 0 !important; border: 0 !important; border-radius: 50% !important;
+  background: transparent !important; box-shadow: none !important;
+  outline-offset: 1px !important;
+  font-size: 0 !important; line-height: 0 !important; text-decoration: none !important;
+  opacity: 1 !important; cursor: pointer;
+  color: color-mix(in srgb, CanvasText 55%, transparent) !important;
   transition: background-color .12s, color .12s;
 }
-.to-save-btn svg { display: block; pointer-events: none; }
-.to-save-btn:hover { background: color-mix(in srgb, CanvasText 10%, transparent); color: CanvasText; }
-.to-save-btn:focus-visible { outline: 2px solid #0a7cff; outline-offset: 1px; }
-.to-save-btn.to-saved { color: #0a7cff; }
-.to-save-btn.to-saved .to-icon-body { fill: currentColor; }
-.to-save-btn.to-error, .to-save-btn.to-error:hover { color: #e0245e; }
+button.to-save-btn.to-save-btn svg { display: block !important; width: 20px !important; height: 20px !important; pointer-events: none !important; }
+button.to-save-btn.to-save-btn:hover { background: color-mix(in srgb, CanvasText 10%, transparent) !important; color: CanvasText !important; }
+button.to-save-btn.to-save-btn:focus-visible { outline: 2px solid #0a7cff !important; outline-offset: 1px !important; }
+button.to-save-btn.to-save-btn.to-saved { color: #0a7cff !important; }
+button.to-save-btn.to-save-btn.to-saved .to-icon-body { fill: currentColor; }
+button.to-save-btn.to-save-btn.to-error, button.to-save-btn.to-save-btn.to-error:hover { color: #e0245e !important; }
 .to-import-btn {
   position: fixed; bottom: 20px; right: 20px; z-index: 99999;
   padding: 10px 16px; border: 0; border-radius: 999px;
