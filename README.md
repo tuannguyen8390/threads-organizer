@@ -1,5 +1,7 @@
 # Threads Organizer
 
+By Dr. Kangabu
+
 Save, organize and share your Threads posts. Everything stays on your device.
 
 ## Install (no tooling needed)

@@ -54,6 +54,13 @@ header {
   padding: var(--space-3) var(--space-3) var(--space-2);
   background: var(--bg); border-bottom: 1px solid var(--border);
 }
+.brand {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2);
+  margin-bottom: var(--space-2); line-height: 1.2;
+}
+.brand-icon { flex: none; color: var(--accent); }
+.brand-name { font-weight: 650; font-size: 15px; color: var(--text); }
+.brand-credit { font-size: 12.5px; color: var(--muted); }
 nav { padding: var(--space-3); border-bottom: 1px solid var(--border); }
 
 input, select, textarea, button { font: inherit; color: inherit; }
