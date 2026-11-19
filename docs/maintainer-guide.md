@@ -48,7 +48,7 @@ Other paths:
 | `tests/helpers.js` | An in-memory storage area and a post builder for tests. |
 | `.github/workflows/ci.yml` | Test workflow. |
 | `.github/workflows/release.yml` | Release workflow. |
-| `docs/` | These guides. `docs/superpowers/` holds internal design history and is not part of the guides. |
+| `docs/` | These guides. |
 
 All data is kept in `chrome.storage.local` under the key `threadsOrganizer`, as `{ posts, folders }`.
 
