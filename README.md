@@ -1,37 +1,31 @@
-# Threads Organizer
+# Threads Organizer | by Dr. Kangabu
 
-By Dr. Kangabu
+Threads Organizer is a Chrome extension for threads.com and threads.net. It adds a stack-of-cards button to each post. Saved posts appear in a side panel, where you sort them into folders, tag them, add notes, search them, and export them as Markdown or JSON.
 
-Save, organize and share your Threads posts. Everything stays on your device.
+## Documentation
 
-## Install (no tooling needed)
+| Guide | Audience | Content |
+| --- | --- | --- |
+| [User guide](docs/user-guide.md) | Anyone using the extension | Install, update, save, organize, search, export, restore, remove data |
+| [Troubleshooting](docs/troubleshooting.md) | Anyone using the extension | Symptoms, checks, how to write a useful bug report |
+| [Maintainer guide](docs/maintainer-guide.md) | Contributors | Dev setup, tests, fixing broken selectors, releases, publication |
 
-1. Download the latest ZIP from the repo's **Releases** page (or `git clone` the repo) and unzip it.
-2. Open `chrome://extensions` and turn on **Developer mode**.
-3. Click **Load unpacked** and pick the unzipped folder.
-4. Pin the extension. Click its icon to open the side panel.
+## Quick start
 
-## Use
+1. Download the latest ZIP from the repository's **Releases** page and extract it into a new folder, or clone the repository.
+2. Open `chrome://extensions` in Chrome.
+3. Turn on **Developer mode** (top right).
+4. Click **Load unpacked** and select the folder that contains `manifest.json`.
+5. Pin the extension, open threads.com, and click the extension icon to open the side panel.
 
-- Click the stack icon on any post. Open the panel to sort it into a folder, tag it and add a note.
-- Organize with folders, tags and notes. Search across everything. Copy link/text, or export a view as Markdown or JSON. JSON import moves data between machines.
+Details and update steps: [User guide](docs/user-guide.md).
 
 ## Privacy
 
-No servers, no accounts, no network requests. Data lives in `chrome.storage.local`.
-
-## Develop
-
-`npm install`, `npm test`. No build step. Edit, then click reload on `chrome://extensions`.
-
-## If posts stop saving
-
-Threads changes its markup. Fix `src/content/selectors.js` (the only file that knows Threads' DOM) and update the fixture test.
-
-## Releasing
-
-Bump `version` in `manifest.json`, then `git tag vX.Y.Z && git push --tags`. The workflow publishes the ZIP.
+The extension makes no network requests and has no account or server. It stores saved posts in `chrome.storage.local` on your device. Its permissions are `storage`, `sidePanel` and `unlimitedStorage`, with host access to `*.threads.com` and `*.threads.net` only. Data leaves your device only when you export a file yourself.
 
 ## License
 
-MIT.
+MIT. See [LICENSE](LICENSE).
+
+Threads Organizer | by Dr. Kangabu
