@@ -1,5 +1,6 @@
 import { createStore } from '../lib/store.js';
 import { filterPosts, allTags } from '../lib/search.js';
+import { formatCount } from '../lib/format.js';
 import { toMarkdown, toJSON, parseImport } from '../lib/exporter.js';
 
 const store = createStore(chrome.storage.local);
@@ -79,6 +80,49 @@ let emptyNode = null;
 const current = (id) => state.db.posts[id];
 const dateLabel = (p) => `@${p.author} · ${new Date(p.postedAt ?? p.savedAt).toLocaleDateString()}`;
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const ICONS = {
+  likes: ['M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z'],
+  replies: ['M20 11.5a7.5 7.5 0 0 1-10.9 6.7L4 19.5l1.3-4.5A7.5 7.5 0 1 1 20 11.5z'],
+  reposts: ['M5 11V9.5A2.5 2.5 0 0 1 7.5 7H19', 'M16 4l3 3-3 3', 'M19 13v1.5a2.5 2.5 0 0 1-2.5 2.5H5', 'M8 20l-3-3 3-3'],
+};
+const COUNT_KEYS = ['likes', 'replies', 'reposts'];
+
+function icon(kind) {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  for (const [k, v] of Object.entries({ viewBox: '0 0 24 24', width: '12', height: '12', fill: 'none',
+    stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+    'aria-hidden': 'true' })) svg.setAttribute(k, v);
+  for (const d of ICONS[kind]) {
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('d', d);
+    svg.append(path);
+  }
+  return svg;
+}
+
+const countsOf = (p) => (p.counts && COUNT_KEYS.every((k) => Number.isFinite(p.counts[k])) ? p.counts : null);
+
+// Meta line: "@author · date" then, when the post has counts, "| icon n" for each count.
+// Only rebuilt when its content key changes.
+function setMeta(node, p) {
+  const label = dateLabel(p);
+  const counts = countsOf(p);
+  const key = JSON.stringify([label, counts && COUNT_KEYS.map((k) => counts[k])]);
+  if (node.dataset.key === key) return;
+  node.dataset.key = key;
+  const kids = [document.createTextNode(label)];
+  if (counts) {
+    const box = el('span', { className: 'counts', title: 'Counts when you saved this post' });
+    for (const k of COUNT_KEYS) {
+      box.append(el('span', { className: 'sep', textContent: '|' }), icon(k),
+        el('span', { className: 'num', textContent: formatCount(counts[k]) }));
+    }
+    kids.push(box);
+  }
+  node.replaceChildren(...kids);
+}
+
 function makeCard(id) {
   const refs = {
     meta: el('div', { className: 'meta' }),
@@ -120,7 +164,7 @@ function setText(node, value) {
 
 function updateCard(c, p) {
   const { refs } = c;
-  setText(refs.meta, dateLabel(p));
+  setMeta(refs.meta, p);
   setText(refs.text, p.text || '(no text)');
   const fs = folderList();
   const folderKey = JSON.stringify(fs.map((f) => [f.id, f.name]));
