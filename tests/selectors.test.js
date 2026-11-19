@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
-import { findPostElements, parsePost, findMenuAnchor } from '../src/content/selectors.js';
+import { findPostElements, parsePost, findMenuAnchor, findRowNeighbors } from '../src/content/selectors.js';
 
 const load = () => new JSDOM(readFileSync(new URL('./fixtures/post.html', import.meta.url), 'utf8')).window.document;
 
@@ -35,4 +35,36 @@ test('findMenuAnchor returns the More button inside a post', () => {
 
 test('findMenuAnchor returns null when there is no More button', () => {
   assert.equal(findMenuAnchor(load().getElementById('p1')), null);
+});
+
+// jsdom has no layout: stub rects (left, top, width, height).
+const rect = (el, l, t, w, h) => {
+  el.getBoundingClientRect = () => ({ left: l, top: t, width: w, height: h, right: l + w, bottom: t + h, x: l, y: t });
+  return el;
+};
+
+test('findRowNeighbors returns icon-ish controls left of the anchor in the same row', () => {
+  const doc = new JSDOM(`<div id="post">
+    <div role="button" id="menu"></div>
+    <button id="pencil"></button>
+    <img id="far-row" /><div role="button" id="below"></div>
+    <div role="button" id="right"></div>
+    <a id="long" href="#">this is a very long link text</a>
+    <a id="thumb" href="#"><img id="thumb-img"></a>
+    <button class="to-save-btn" id="mine"></button>
+    <div role="button" id="toofar"></div>
+  </div>`).window.document;
+  const $ = (id) => doc.getElementById(id);
+  const anchor = rect($('menu'), 900, 20, 24, 24);
+  rect($('pencil'), 860, 20, 24, 24);
+  rect($('below'), 860, 120, 24, 24);
+  rect($('right'), 930, 20, 24, 24);
+  rect($('long'), 800, 20, 40, 24);
+  rect($('thumb'), 820, 10, 44, 44);
+  rect($('mine'), 840, 20, 32, 32);
+  rect($('thumb-img'), 822, 12, 40, 40);
+  rect($('toofar'), 500, 20, 24, 24);
+  rect($('far-row'), 860, 300, 24, 24);
+  const ids = findRowNeighbors($('post'), anchor).map((e) => e.id).sort();
+  assert.deepEqual(ids, ['pencil', 'thumb', 'thumb-img'].sort());
 });

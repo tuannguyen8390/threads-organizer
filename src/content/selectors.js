@@ -55,3 +55,25 @@ export function findMenuAnchor(el) {
   const btn = [...el.querySelectorAll(BTN)].find((b) => /^more$/i.test((b.getAttribute('aria-label') ?? '').trim()));
   return btn ?? null;
 }
+
+const ROW_TOL = 18;
+const ROW_REACH = 160;
+
+// Icon-ish controls or thumbnails sitting just left of the anchor in its visual row
+// (e.g. the pencil icon in the feed, the thumbnail on the Activity page).
+export function findRowNeighbors(el, anchor) {
+  if (!anchor) return [];
+  const a = anchor.getBoundingClientRect();
+  const aMid = a.top + a.height / 2;
+  const out = [];
+  for (const n of el.querySelectorAll('button, [role="button"], img, a')) {
+    if (n === anchor || n.closest('.to-save-btn') || anchor.contains(n) || n.contains(anchor)) continue;
+    if (n.tagName === 'A' && (n.textContent.trim().length > 12) && !n.querySelector('img, svg')) continue;
+    const r = n.getBoundingClientRect();
+    if (!r.width && !r.height) continue;
+    if (Math.abs(r.top + r.height / 2 - aMid) > ROW_TOL) continue;
+    if (r.right > a.left + 2 || r.left < a.left - ROW_REACH) continue;
+    out.push(n);
+  }
+  return out;
+}

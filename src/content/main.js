@@ -1,16 +1,57 @@
 import { createStore } from '../lib/store.js';
-import { findPostElements, parsePost, findMenuAnchor } from './selectors.js';
+import { findPostElements, parsePost, findMenuAnchor, findRowNeighbors } from './selectors.js';
 import { mountImportButton } from './import-ui.js';
 
 const store = createStore(chrome.storage.local);
 const MARK = 'data-to-id';
 
-const setLabel = (btn, saved) => {
-  btn.textContent = saved ? 'Saved ✓' : 'Save & organize';
-  btn.classList.toggle('to-saved', saved);
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const svgPath = (d) => {
+  const p = document.createElementNS(SVG_NS, 'path');
+  p.setAttribute('d', d);
+  return p;
 };
 
-// Align the button under the post's "…" menu using real geometry; CSS default otherwise.
+// Bookmark outline with a "+" (unsaved) or a check (saved); built once, updated in place.
+function buildIcon() {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', '20');
+  svg.setAttribute('height', '20');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.8');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  const body = svgPath('M6 3.5h12a1 1 0 0 1 1 1V21l-7-4.6L5 21V4.5a1 1 0 0 1 1-1z');
+  body.setAttribute('class', 'to-icon-body');
+  const plus = svgPath('M12 7v6M9 10h6');
+  plus.setAttribute('class', 'to-icon-plus');
+  const check = svgPath('M8.8 9.6l2.2 2.2 4.2-4.4');
+  check.setAttribute('class', 'to-icon-check');
+  svg.append(body, plus, check);
+  return svg;
+}
+
+const setLabel = (btn, saved) => {
+  const text = saved ? 'Saved. Click to remove' : 'Save & organize';
+  btn.title = text;
+  btn.setAttribute('aria-label', text);
+  btn.classList.toggle('to-saved', saved);
+  btn.classList.remove('to-error');
+};
+
+const setError = (btn, message) => {
+  btn.title = message;
+  btn.setAttribute('aria-label', message);
+  btn.classList.add('to-error');
+  setTimeout(() => btn.classList.remove('to-error'), 2500);
+};
+
+// Place the icon left of the post's "..." (and of any icon/thumbnail just left of it),
+// vertically centered on it, using real geometry; CSS default otherwise.
 const GAP = 6;
 function placeButton(btn, el, anchor = findMenuAnchor(el)) {
   if (!anchor) {
@@ -18,11 +59,15 @@ function placeButton(btn, el, anchor = findMenuAnchor(el)) {
     btn.style.right = '';
     return;
   }
+  // Read all rects first, then write styles.
   const a = anchor.getBoundingClientRect();
-  const r = el.getBoundingClientRect();
   if (!a.width && !a.height) return; // hidden or not laid out yet
-  const top = `${Math.round(a.bottom - r.top + GAP)}px`;
-  const right = `${Math.max(0, Math.round(r.right - a.right))}px`;
+  const r = el.getBoundingClientRect();
+  const h = btn.offsetHeight || 32;
+  let leftEdge = a.left;
+  for (const n of findRowNeighbors(el, anchor)) leftEdge = Math.min(leftEdge, n.getBoundingClientRect().left);
+  const top = `${Math.round(a.top + a.height / 2 - r.top - h / 2)}px`;
+  const right = `${Math.max(0, Math.round(r.right - leftEdge + GAP))}px`;
   if (btn.style.top !== top) btn.style.top = top;
   if (btn.style.right !== right) btn.style.right = right;
 }
@@ -48,7 +93,7 @@ function decorate(el, savedIds) {
   btn.type = 'button';
   btn.className = 'to-save-btn';
   btn.dataset.toBtn = post.id;
-  btn.title = 'Click to remove from Threads Organizer';
+  btn.appendChild(buildIcon());
   setLabel(btn, savedIds.has(post.id));
   btn.addEventListener('click', async (e) => {
     e.preventDefault();
@@ -69,7 +114,7 @@ function decorate(el, savedIds) {
       }
     } catch (err) {
       console.error('[Threads Organizer]', err);
-      btn.textContent = "Couldn't read this post";
+      setError(btn, "Couldn't save this post");
     }
   });
   el.appendChild(btn);
