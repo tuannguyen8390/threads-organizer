@@ -135,6 +135,8 @@ Show the list of saved posts.
 **Expected result**
 The side panel opens beside the page with the title **Threads Organizer | by Dr. Kangabu**. It has a search box, folder chips, tag chips, an author list, **From** and **To** date fields, the post cards, and a footer with **Share or back up**.
 
+![The side panel with search, folder chips, tag chips and saved post cards](images/panel-overview.png)
+
 **If it does not work**
 See [Side panel does not open](troubleshooting.md#side-panel-does-not-open).
 
@@ -156,6 +158,8 @@ Add a Threads post to your collection.
 
 **Expected result**
 The icon turns blue and its top card is filled. The tooltip now reads **Saved. Click to remove**. The post appears in the side panel under **To sort**, with its author, date, text and counts.
+
+![The stack icon on a post header, before and after saving](images/feed-icon.png)
 
 **If it does not work**
 - No icon: see [No stack icon on posts](troubleshooting.md#no-stack-icon-on-posts).
@@ -234,6 +238,8 @@ File a post in a folder, or return it to To sort.
 **Expected result**
 The post is stored in that folder. It shows under that folder's chip. If you are viewing a different folder, the card leaves the current view.
 
+![A post card with its folder list, tags, note and counts](images/card-detail.png)
+
 **If it does not work**
 Make sure the folder exists as a chip. See [Create and delete a folder](#create-and-delete-a-folder).
 
@@ -252,6 +258,8 @@ Label a post so you can filter by the label.
 
 **Expected result**
 The tags are saved. A chip such as `#ai 1` appears in the tag row. The number is how many posts carry the tag. Tags are converted to lower case, a leading `#` is removed, and duplicates are dropped.
+
+![A post card with tags and a note filled in](images/card-detail.png)
 
 **If it does not work**
 Tags are saved when you leave the field. If the tags are missing after you leave the field, see [How to collect a bug report](troubleshooting.md#how-to-collect-a-bug-report).
@@ -337,6 +345,8 @@ Chrome downloads `threads-export.md` or `threads-export.json`.
 
 - The Markdown file has one section per folder (posts without a folder are under To sort). Each post lists author, date, quoted text, link, engagement line, tags and note.
 - The JSON file holds the posts and the folders those posts use. Use JSON for backups.
+
+![The side panel footer with the Export MD, Export JSON and Import JSON buttons](images/footer-export.png)
 
 **If it does not work**
 See [Export and import problems](troubleshooting.md#export-and-import-problems).

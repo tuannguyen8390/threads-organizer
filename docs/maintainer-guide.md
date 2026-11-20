@@ -11,6 +11,7 @@ This guide is for people who change, test and release the extension. The project
 - [Run the tests](#run-the-tests)
 - [Load the working copy in Chrome and reload after edits](#load-the-working-copy-in-chrome-and-reload-after-edits)
 - [Fix broken post detection after Threads changes its markup](#fix-broken-post-detection-after-threads-changes-its-markup)
+- [Regenerate the documentation screenshots](#regenerate-the-documentation-screenshots)
 - [Continuous integration](#continuous-integration)
 - [Make a release](#make-a-release)
 - [First-time publication to GitHub](#first-time-publication-to-github)
@@ -48,7 +49,8 @@ Other paths:
 | `tests/helpers.js` | An in-memory storage area and a post builder for tests. |
 | `.github/workflows/ci.yml` | Test workflow. |
 | `.github/workflows/release.yml` | Release workflow. |
-| `docs/` | These guides. |
+| `docs/` | These guides, and `docs/images/` (screenshots and demo GIF). |
+| `tools/screenshots/` | Mock Threads pages and `capture.py`, which regenerates `docs/images/`. See [Regenerate the documentation screenshots](#regenerate-the-documentation-screenshots). |
 
 All data is kept in `chrome.storage.local`, one key per item: `tops:post:<id>` holds a post, `tops:folder:<id>` holds a folder and `tops:counts:<id>` holds a post's engagement counts `{likes, replies, reposts}`. Only `updateCounts` writes the counts key, so a Threads tab refreshing counts cannot overwrite a note, tags or folder edited in the panel; `getAll()` merges the counts back into `post.counts`. Builds from e9d86f0 stored counts inside the post; the reader still accepts that (a counts key wins, and any other write of the post moves the old value to the counts key). A one-time copy of the pre-upgrade library (the old `threadsOrganizer` value) is kept under `tops:legacy-backup`, written in the same `set` as the migrated keys. The extension never reads or deletes it. To drop it, run `chrome.storage.local.remove('tops:legacy-backup')` in the DevTools console of the side panel page. `createStore(area)` in `src/lib/store.js` still returns `{ posts, folders }` maps keyed by id, built with no prototype so ids such as `__proto__` are plain data. Each write touches only the keys that changed (`area.set` for changed items, `area.remove` for deleted ones), so the panel and several Threads tabs can edit different posts at the same time without overwriting each other. Two contexts editing the same post still resolve as last writer wins for that post. Listen for changes with `isStoreChange(changes, areaName)` from the same module.
 
@@ -157,6 +159,29 @@ The new test passes, the old tests still pass, and the icon, text and counts are
 
 **If it does not work**
 Keep the failing fixture and test. Narrow the change in `selectors.js` until the test passes. jsdom has no layout, so checks that depend on position (`geometry`, row neighbors) must be verified in Chrome.
+
+## Regenerate the documentation screenshots
+
+**Purpose**
+Rebuild the images in `docs/images/` (`feed-icon.png`, `panel-overview.png`, `card-detail.png`, `footer-export.png`, `activity.png`, `demo.gif`) from the real extension.
+
+**Before you start**
+- Python 3 with the `playwright` package and its Chromium build installed, and Pillow.
+- A display (or xvfb). The script starts Chromium with `--headless=new`, which needs the usual Chromium system libraries.
+
+**Steps**
+1. From the repository root, run `python3 tools/screenshots/capture.py`.
+
+**Expected result**
+The script loads the working copy as an extension, serves `tools/screenshots/mock-feed.html` and `mock-activity.html` as `https://www.threads.com/` through request interception, prints each stack button with its `data-to-anchor` and `data-to-counts`, drives the real side panel, and lists the files it wrote. It needs no network.
+
+**What to check**
+- Open each image. The stack icon sits left of the pencil and "..." on every post, with one icon per Activity row.
+- The panel shows folders, tags, notes and a counts line such as `@lin.bakes · 11/18/2026 | 2.3K | 132 | 58`.
+- Each PNG is under 500 KB and `demo.gif` is under 3 MB.
+
+**If it does not work**
+The script stops with a message when no `button.to-save-btn` appears. The mock pages stand in for Threads. If you change how `src/content/selectors.js` finds posts, menu buttons, neighbors or counts, update the mock pages to match and rerun. Commit the new images with the change.
 
 ## Continuous integration
 

@@ -2,6 +2,20 @@
 
 Threads Organizer is a Chrome extension for threads.com and threads.net. It adds a stack-of-cards button to each post. Saved posts appear in a side panel, where you sort them into folders, tag them, add notes, search them, and export them as Markdown or JSON.
 
+## What it looks like
+
+![Demo: click the stack icon, find the post in the side panel, move it to a folder, add tags and a note, search, export](docs/images/demo.gif)
+
+![The stack icon on a post header, before and after saving](docs/images/feed-icon.png)
+
+![The side panel with folders, tags and saved post cards](docs/images/panel-overview.png)
+
+![One post card with folder, tags, note and engagement counts](docs/images/card-detail.png)
+
+![The icon placed beside the "..." button on the Activity page](docs/images/activity.png)
+
+Screenshots are generated from the real extension running on a mock Threads-style page with fictional users (see tools/screenshots). Threads' real page layout may differ slightly.
+
 ## Documentation
 
 | Guide | Audience | Content |
