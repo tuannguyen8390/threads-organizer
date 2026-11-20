@@ -23,6 +23,7 @@ Screenshots are generated from the real extension running on a mock Threads-styl
 | [User guide](docs/user-guide.md) | Anyone using the extension | Install, update, save, organize, search, export, restore, remove data |
 | [Troubleshooting](docs/troubleshooting.md) | Anyone using the extension | Symptoms, checks, how to write a useful bug report |
 | [Maintainer guide](docs/maintainer-guide.md) | Contributors | Dev setup, tests, fixing broken selectors, releases, publication |
+| [AGENTS.md](AGENTS.md) | AI agents | Rules that must not be broken, commands, project map, how to help a user install |
 
 ## Quick start
 
