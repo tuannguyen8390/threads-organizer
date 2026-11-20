@@ -387,7 +387,7 @@ Know where your data is and remove it when you want to.
 - Saved posts, folders, tags and notes are in `chrome.storage.local` in your Chrome profile on this computer.
 - Each saved post and each folder is stored as its own item (`tops:post:...` and `tops:folder:...`). If you used an earlier version, the extension moves your saved posts to this layout automatically the first time it runs, without changing them.
 - During that move the extension keeps one copy of your pre-upgrade library under the item `tops:legacy-backup`. It is never deleted automatically and takes some disk space. Chrome has no screen for it. To remove it, open the side panel, right-click it, choose **Inspect**, and run `chrome.storage.local.remove('tops:legacy-backup')` in the Console.
-- The extension makes no network requests. Nothing is sent to a server.
+- The extension makes no network requests. Nothing is sent to a server. The one outside link is the **Dr. Kangabu** credit in the panel title; it opens the author's website in a new tab only when you click it.
 - Exports (Markdown and JSON) include your private notes, tags and folder names. Check a file before you share it.
 - Nothing syncs between devices. Use Export JSON and Import JSON to move data.
 

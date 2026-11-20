@@ -36,10 +36,10 @@ Details and update steps: [User guide](docs/user-guide.md).
 
 ## Privacy
 
-The extension makes no network requests of its own and has no account or server. It stores saved posts, folders, tags and notes in `chrome.storage.local` on your device. Its permissions are `storage`, `sidePanel` and `unlimitedStorage`, with host access to `*.threads.com` and `*.threads.net` only. The extension never sends your library anywhere; it leaves your device only when you export a file yourself, and exports include your private notes, tags and folder names, so review a file before you share it. The save button sits in the Threads page, so scripts running on threads.com can see which visible posts are marked as saved; they cannot read your library, notes or tags.
+The extension makes no network requests of its own and has no account or server. The only outside link is the "Dr. Kangabu" credit in the panel title, which opens the author's website in a new tab when you click it. It stores saved posts, folders, tags and notes in `chrome.storage.local` on your device. Its permissions are `storage`, `sidePanel` and `unlimitedStorage`, with host access to `*.threads.com` and `*.threads.net` only. The extension never sends your library anywhere; it leaves your device only when you export a file yourself, and exports include your private notes, tags and folder names, so review a file before you share it. The save button sits in the Threads page, so scripts running on threads.com can see which visible posts are marked as saved; they cannot read your library, notes or tags.
 
 ## License
 
 MIT. See [LICENSE](LICENSE).
 
-Threads Organizer | by Dr. Kangabu
+Threads Organizer | by [Dr. Kangabu](https://drkangabu.netlify.app)
