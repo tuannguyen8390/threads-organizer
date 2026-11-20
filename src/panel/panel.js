@@ -116,7 +116,7 @@ function setMeta(node, p) {
   const key = JSON.stringify([label, counts && COUNT_KEYS.map((k) => counts[k])]);
   if (node.dataset.key === key) return;
   node.dataset.key = key;
-  const kids = [document.createTextNode(label)];
+  const kids = [el('span', { className: 'who', textContent: label, title: label })];
   if (counts) {
     const box = el('span', { className: 'counts', title: 'Counts when last seen on Threads' });
     for (const k of COUNT_KEYS) {
