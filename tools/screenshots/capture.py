@@ -184,7 +184,7 @@ def run(ctx):
     after = shot_header(0)
     combo = stack(before, after, "Before: not saved", "After: saved (blue)")
     save_png(combo, "feed-icon.png")
-    for i in (2, 4):
+    for i in (2, 4, 5):
         click_btn(i)
     click_btn(1)
     click_btn(3)
@@ -234,6 +234,19 @@ def run(ctx):
     panel.wait_for_timeout(300)
     panel.evaluate("window.scrollTo(0,0)")
     ov = save_png(panel_shot(), "panel-overview.png")
+
+    # Layout check (not published): the meta line must stay on one row at narrow widths.
+    scratch_dir = pathlib.Path(os.environ.get("TO_SCRATCH") or tempfile.gettempdir())
+    for w in (320, 360, 420):
+        panel.set_viewport_size({"width": w, "height": PANEL_VP["height"]})
+        panel.wait_for_timeout(250)
+        rows = panel.evaluate("""() => [...document.querySelectorAll('.card .meta')].map(m => {
+            const kids = [...m.children]; const tops = kids.flatMap(k => k.classList.contains('counts') ? [...k.children] : [k]).map(k => Math.round(k.getBoundingClientRect().top));
+            return Math.max(...tops) - Math.min(...tops) < 8; })""")
+        print(f"meta single-row at {w}px: {all(rows)} ({sum(rows)}/{len(rows)})")
+        (scratch_dir / f"panel-{w}.png").write_bytes(panel.screenshot())
+    panel.set_viewport_size(PANEL_VP)
+    panel.wait_for_timeout(250)
 
     # Card detail: the Recipes card.
     c = card("Sourdough update")

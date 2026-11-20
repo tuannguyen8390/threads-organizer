@@ -45,7 +45,7 @@ POSTS = [
  ("lin.bakes","LB","#e8590c","2026-11-18T07:05:00Z","Lb4nP33","Sourdough update: 78% hydration, long cold rest, and a crust that sings when it cools. Recipe in my notes.",False,("2.3K","132","58","11")),
  ("dev.priya","DP","#12b886","2026-11-17T16:22:00Z","Dp2sQ44","Reading list for the weekend: one novel, one field guide, one very long essay about maps.",False,("310","18","6","1")),
  ("ari.travels","AT","#d6336c","2026-11-16T11:30:00Z","At8vL55","Night train from the coast, window seat, tea in a paper cup. Slow travel is underrated.",True,("1.8K","76","40","9")),
- ("sam.reads","SR","#495057","2026-11-15T21:15:00Z","Sr5hT66","Finished a book that I did not want to end, so now I am rereading the first chapter on purpose.",False,("527","33","12","3")),
+ ("sam.reads.slow.books","SR","#495057","2026-11-15T21:15:00Z","Sr5hT66","Finished a book that I did not want to end, so now I am rereading the first chapter on purpose.",False,("527","33","12","3")),
 ]
 
 def post(h,ini,col,dt,code,text,tr,counts):
@@ -74,23 +74,27 @@ def page(title, body):
 feed = '<div class="top">Home</div>' + "\n".join(post(*p) for p in POSTS)
 (HERE/"mock-feed.html").write_text(page("Mock feed", feed))
 
-def grad(a,b):
+def grad(a,b,mode='img'):
     import urllib.parse
     svg=f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="{a}"/><stop offset="1" stop-color="{b}"/></linearGradient></defs><rect width="44" height="44" rx="8" fill="url(#g)"/></svg>'
+    if mode == 'svg':   # inline <svg> thumbnail (not an <img>)
+        return svg.replace('<svg ', '<svg class="thumb" width="44" height="44" ', 1).replace('id="g"', f'id="g{a[1:]}"').replace('url(#g)', f'url(#g{a[1:]})')
+    if mode == 'bg':    # <div> with a CSS background-image
+        return f'<div class="thumb" style="background:url(&quot;data:image/svg+xml,{urllib.parse.quote(svg)}&quot;) center/cover"></div>'
     return f'<img class="thumb" alt="" width="44" height="44" src="data:image/svg+xml,{urllib.parse.quote(svg)}">'
 ACT = [
  ("maya.writes","MW","#7c4dff","#e03131","5m","liked your reply: \"Draft one is the ugliest draft\"","A1mw01","none"),
- ("tomas.codes","TC","#0a7cff","#12b886","12m","replied: \"Writing the test first changed how I design.\"","A2tc02","thumb:#74c0fc:#364fc9"),
+ ("tomas.codes","TC","#0a7cff","#12b886","12m","replied: \"Writing the test first changed how I design.\"","A2tc02","thumb:#74c0fc:#364fc9:svg"),
  ("lin.bakes","LB","#e8590c","#e03131","27m","liked your post about slow mornings","A3lb03","none"),
  ("dev.priya","DP","#12b886","#0a7cff","1h","reposted your list of weekend books","A4dp04","pencil"),
- ("ari.travels","AT","#d6336c","#7c4dff","3h","mentioned you: \"Ask nora about the night train.\"","A5at05","thumb:#ffd43b:#f76707"),
+ ("ari.travels","AT","#d6336c","#7c4dff","3h","mentioned you: \"Ask nora about the night train.\"","A5at05","thumb:#ffd43b:#f76707:bg"),
  ("nora.draws","ND","#862e9c","#e03131","1d","liked your photo of the harbor sketch","A6nd06","none"),
 ]
 rows=[]
 for h,ini,col,bc,t,prev,code,extra in ACT:
     ex=''
     if extra.startswith('thumb'):
-        _,a,b=extra.split(':'); ex=grad(a,b)
+        _,a,b,mode=(extra.split(':')+['img'])[:4]; ex=grad(a,b,mode)
     elif extra=='pencil': ex=f'<div class="ib" role="button" tabindex="0" aria-label="Edit">{PENCIL}</div>'
     rows.append(f'''<div class="row" data-pressable-container="true">
  <div class="avw"><div class="av" style="background:{col}">{ini}</div><div class="badge" style="background:{bc}"></div></div>
