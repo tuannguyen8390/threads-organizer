@@ -254,3 +254,38 @@ test('parsePost drops pagination markers like 1/2 but keeps other fractions in p
   const p = parseHtml('<span dir="auto">part one</span><span dir="auto">1/2</span><span dir="auto">mix 1/2 cup</span>');
   assert.equal(p.text, 'part one\nmix 1/2 cup');
 });
+
+test('findRowNeighbors includes non-img thumbnails and skips tiny or misplaced ones', () => {
+  const doc = new JSDOM(`<div id="post">
+    <div role="button" id="menu"></div>
+    <svg id="svg-thumb"></svg>
+    <div class="thumb" id="bg-thumb" style="background-image:url(x.png)"></div>
+    <div class="thumb" id="css-bg"></div>
+    <div class="thumb" id="plain"></div>
+    <svg id="tiny"></svg>
+    <svg id="below"></svg>
+    <svg id="right"></svg>
+    <picture id="pic"></picture><canvas id="cv"></canvas><video id="vid"></video>
+    <div class="to-save-btn" id="mine"><svg id="mine-svg"></svg></div>
+  </div>`).window.document;
+  const $ = (id) => doc.getElementById(id);
+  const win = doc.defaultView;
+  const realGcs = win.getComputedStyle.bind(win);
+  win.getComputedStyle = (n) => (n.id === 'css-bg' ? { backgroundImage: 'linear-gradient(red, blue)' } : realGcs(n));
+  const anchor = rect($('menu'), 900, 20, 24, 24);
+  rect($('svg-thumb'), 830, 6, 56, 56);
+  rect($('bg-thumb'), 770, 6, 56, 56);
+  rect($('css-bg'), 745, 17, 30, 30);
+  rect($('plain'), 770, 6, 56, 56);
+  rect($('tiny'), 880, 20, 12, 12);
+  rect($('below'), 830, 200, 56, 56);
+  rect($('right'), 940, 6, 56, 56);
+  rect($('pic'), 750, 6, 30, 30);
+  rect($('cv'), 780, 8, 30, 30);
+  rect($('vid'), 745, 8, 30, 30);
+  rect($('mine'), 840, 6, 56, 56);
+  rect($('mine-svg'), 842, 8, 30, 30);
+  const ids = findRowNeighbors($('post'), anchor).map((e) => e.id);
+  for (const id of ['svg-thumb', 'bg-thumb', 'css-bg', 'pic', 'cv', 'vid']) assert.ok(ids.includes(id), id);
+  for (const id of ['plain', 'tiny', 'below', 'right', 'mine', 'mine-svg', 'menu']) assert.ok(!ids.includes(id), id);
+});

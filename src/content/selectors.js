@@ -302,18 +302,42 @@ export function findMenuAnchor(el) {
 const ROW_TOL = 18;
 const ROW_REACH = 160;
 
+const MIN_THUMB = 24;
+const MEDIA = new Set(['SVG', 'PICTURE', 'CANVAS', 'VIDEO']);
+
+function hasBackgroundImage(n) {
+  const inline = n.getAttribute('style') || '';
+  if (/background(-image)?\s*:[^;]*(url|gradient)\(/i.test(inline)) return true;
+  const win = n.ownerDocument && n.ownerDocument.defaultView;
+  if (!win || typeof win.getComputedStyle !== 'function') return false;
+  try {
+    const bg = win.getComputedStyle(n).backgroundImage;
+    return !!bg && bg !== 'none';
+  } catch { return false; }
+}
+
 // Icon-ish controls or thumbnails sitting just left of the anchor in its visual row
 // (e.g. the pencil icon in the feed, the thumbnail on the Activity page).
+// Candidate scan is bounded on purpose: known control/media tags, anything with an inline
+// background, plus div/span only when they carry a class or inline style (CSS-background
+// thumbnails need one of those); bare wrapper nodes are never measured.
 export function findRowNeighbors(el, anchor) {
   if (!anchor) return [];
   const a = anchor.getBoundingClientRect();
   const aMid = a.top + a.height / 2;
   const out = [];
-  for (const n of el.querySelectorAll('button, [role="button"], img, a')) {
+  const sel = 'svg, picture, canvas, video, img, button, [role="button"], a, [style*="background"], div[class], span[class], div[style], span[style]';
+  for (const n of el.querySelectorAll(sel)) {
     if (n === anchor || n.closest('.to-save-btn') || anchor.contains(n) || n.contains(anchor)) continue;
-    if (n.tagName === 'A' && (n.textContent.trim().length > 12) && !n.querySelector('img, svg')) continue;
+    const tag = n.tagName.toUpperCase();
+    const control = n.matches('button, [role="button"], img, a');
+    if (tag === 'A' && (n.textContent.trim().length > 12) && !n.querySelector('img, svg')) continue;
     const r = n.getBoundingClientRect();
     if (!r.width && !r.height) continue;
+    if (!control) {
+      if (r.width < MIN_THUMB || r.height < MIN_THUMB) continue;
+      if (!MEDIA.has(tag) && !hasBackgroundImage(n)) continue;
+    }
     if (Math.abs(r.top + r.height / 2 - aMid) > ROW_TOL) continue;
     if (r.right > a.left + 2 || r.left < a.left - ROW_REACH) continue;
     out.push(n);
